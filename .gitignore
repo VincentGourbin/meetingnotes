@@ -1,0 +1,13 @@
+# Ignorer les dossiers output et venv
+output/
+venv/
+
+# Ignorer les fichiers JSON, MP3, et RTTM
+*.json
+*.mp3
+*.rttm
+
+# Fichiers temporaires ou générés
+*.pyc
+__pycache__/
+.DS_Store
