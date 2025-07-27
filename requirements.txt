@@ -1,0 +1,30 @@
+# Interface utilisateur web
+gradio>=4.0.0
+
+# Traitement audio
+pydub>=0.25.1
+torchaudio>=2.0.0
+
+# Traitement vidéo
+moviepy>=1.0.3
+
+# Intelligence artificielle et modèles  
+torch>=2.0.0
+
+# Transformers (development version requise pour Voxtral)
+git+https://github.com/huggingface/transformers
+
+# Accelerate (requis pour device_map dans transformers)
+accelerate>=0.20.0
+
+# Quantisation avec Quanto (économie mémoire)
+optimum[quanto]>=1.10.0
+
+# Audio processing
+mistral-common[audio]>=1.8.0,<2.0.0
+soundfile>=0.12.1,<1.0.0
+
+# Utilitaires système
+python-dotenv>=1.0.0,<2.0.0
+requests>=2.31.0,<3.0.0
+psutil>=5.8.0,<6.0.0

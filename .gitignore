@@ -1,3 +1,6 @@
+# Variables d'environnement (contient les tokens sensibles)
+.env
+
 # Ignorer les dossiers output et venv
 output/
 venv/
@@ -7,7 +10,21 @@ venv/
 *.mp3
 *.rttm
 
+# Fichiers audio/vidéo temporaires
+*.wav
+*.WAV
+*.mp4
+*.avi
+*.mov
+
 # Fichiers temporaires ou générés
 *.pyc
 __pycache__/
 .DS_Store
+
+# Logs
+*.log
+
+# Fichiers de cache MLX/Hugging Face
+.cache/
+.huggingface/
