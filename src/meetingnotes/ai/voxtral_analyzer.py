@@ -17,7 +17,7 @@ Dépendances:
 import torch
 import torchaudio
 import tempfile
-from transformers import VoxtralForConditionalGeneration, AutoProcessor, QuantoConfig
+from transformers import VoxtralForConditionalGeneration, AutoProcessor
 from pydub import AudioSegment
 from typing import List, Dict, Tuple, Optional
 import math
@@ -81,20 +81,19 @@ class VoxtralAnalyzer:
             self.dtype = torch.float16  # CPU avec float16 pour économiser la mémoire
             print(f"⚠️  Utilisation du CPU avec float16")
         
-        # Configuration de quantisation Quanto pour économie mémoire
-        quantization_config = QuantoConfig(weights="int8")
+        # Chargement direct du modèle sans quantification Quanto
+        # (les modèles pré-quantifiés sont gérés automatiquement)
+        print("📦 Chargement du modèle pré-quantifié ou standard")
         
-        # Chargement optimisé du modèle avec quantisation et device_map
         self.model = VoxtralForConditionalGeneration.from_pretrained(
             self.model_name,
             token=hf_token,
             torch_dtype=self.dtype,
             low_cpu_mem_usage=True,
-            device_map=device_str,  # Utilisation de device_map au lieu de .to()
-            quantization_config=quantization_config  # Quantisation qint8 pour économie mémoire
+            device_map=device_str
         )
         
-        print("🚀 Chargement optimisé avec device_map, dtype intelligent et quantisation qint8")
+        print(f"🚀 Chargement optimisé avec device_map et dtype intelligent")
         
         # Afficher les stats de mémoire après chargement
         MemoryManager.print_memory_stats("Après chargement Voxtral")
@@ -210,6 +209,72 @@ class VoxtralAnalyzer:
         
         chunk.export(chunk_path, format="wav")
         return chunk_path
+    
+    def _adjust_diarization_timestamps(self, reference_speakers_data: str, start_offset_seconds: float, chunk_duration_seconds: float) -> str:
+        """
+        Ajuste les timestamps de diarisation selon l'offset du segment audio.
+        Ne garde que les segments qui sont réellement dans ce chunk.
+        
+        Args:
+            reference_speakers_data (str): Données de diarisation avec balises
+            start_offset_seconds (float): Décalage en secondes du début du segment
+            chunk_duration_seconds (float): Durée du chunk en secondes
+            
+        Returns:
+            str: Diarisation ajustée avec les nouveaux timestamps
+        """
+        if not reference_speakers_data or not reference_speakers_data.strip():
+            return reference_speakers_data
+        
+        adjusted_lines = []
+        
+        for line in reference_speakers_data.split('\n'):
+            if '<début>' in line and '<fin>' in line:
+                # Extraire les timestamps actuels
+                try:
+                    start_tag_start = line.find('<début>') + len('<début>')
+                    start_tag_end = line.find('</début>')
+                    end_tag_start = line.find('<fin>') + len('<fin>')
+                    end_tag_end = line.find('</fin>')
+                    
+                    original_start = float(line[start_tag_start:start_tag_end])
+                    original_end = float(line[end_tag_start:end_tag_end])
+                    
+                    # Vérifier si le segment a une intersection avec ce chunk
+                    chunk_start = start_offset_seconds
+                    chunk_end = start_offset_seconds + chunk_duration_seconds
+                    
+                    # Segment complètement avant ou après ce chunk ? Ignorer
+                    if original_end <= chunk_start or original_start >= chunk_end:
+                        continue
+                    
+                    # Calculer l'intersection avec le chunk
+                    intersect_start = max(original_start, chunk_start)
+                    intersect_end = min(original_end, chunk_end)
+                    
+                    # Ajuster les timestamps par rapport au début du chunk
+                    adjusted_start = intersect_start - start_offset_seconds
+                    adjusted_end = intersect_end - start_offset_seconds
+                    
+                    # S'assurer que les timestamps sont positifs et dans les limites du chunk
+                    adjusted_start = max(0, adjusted_start)
+                    adjusted_end = min(chunk_duration_seconds, adjusted_end)
+                    
+                    # Seulement inclure si on a encore une durée significative (>0.1s)
+                    if adjusted_end - adjusted_start > 0.1:
+                        # Reconstituer la ligne avec les nouveaux timestamps
+                        adjusted_line = line[:start_tag_start] + f"{adjusted_start:.3f}" + line[start_tag_end:end_tag_start] + f"{adjusted_end:.3f}" + line[end_tag_end:]
+                        adjusted_lines.append(adjusted_line)
+                        
+                except (ValueError, IndexError) as e:
+                    # En cas d'erreur de parsing, garder la ligne originale
+                    print(f"⚠️ Erreur ajustement timestamp: {e}")
+                    adjusted_lines.append(line)
+            else:
+                # Ligne sans timestamp, garder telle quelle
+                adjusted_lines.append(line)
+        
+        return '\n'.join(adjusted_lines)
     
     def transcribe_and_understand(
         self, 
@@ -415,7 +480,7 @@ class VoxtralAnalyzer:
         self, 
         wav_path: str, 
         language: str = "french", 
-        meeting_type: str = "information",
+        selected_sections: list = None,
         chunk_duration_minutes: int = 15,
         reference_speakers_data=None
     ) -> Dict[str, str]:
@@ -437,15 +502,22 @@ class VoxtralAnalyzer:
         duration = self._get_audio_duration(wav_path)
         print(f"🎵 Durée audio: {duration:.1f} minutes")
         
-        # Créer des chunks de temps fixes avec la durée demandée
+        # Créer des chunks de temps fixes avec overlap de 10 secondes
         chunk_duration = chunk_duration_minutes * 60  # Convertir en secondes
+        overlap_duration = 10.0  # 10 secondes d'overlap
         chunks = []
         current_time = 0
         
         while current_time < duration * 60:
             end_time = min(current_time + chunk_duration, duration * 60)
             chunks.append((current_time, end_time))
-            current_time = end_time
+            
+            # Pour le prochain chunk, commencer 10 secondes avant la fin du chunk actuel
+            # sauf si c'est le dernier chunk
+            if end_time < duration * 60:
+                current_time = max(0, end_time - overlap_duration)
+            else:
+                break
         
         print(f"📦 Division en {len(chunks)} chunks de {chunk_duration_minutes} minutes")
         
@@ -463,8 +535,24 @@ class VoxtralAnalyzer:
             chunk_path = self._extract_audio_chunk(wav_path, start_time, end_time)
             
             try:
+                # Ajuster la diarisation selon l'offset temporel du chunk
+                adjusted_speaker_context = ""
+                if reference_speakers_data:
+                    chunk_duration_sec = end_time - start_time
+                    adjusted_speaker_context = self._adjust_diarization_timestamps(reference_speakers_data, start_time, chunk_duration_sec)
+                
                 # Utiliser audio instruct mode pour analyse directe depuis la config centralisée
-                prompt_text = VoxtralPrompts.get_meeting_summary_prompt(meeting_type, "")
+                sections_list = selected_sections if selected_sections else ["resume_executif"]
+                
+                # Indiquer que c'est un segment d'un audio plus long seulement s'il y a plusieurs chunks
+                chunk_info = f"SEGMENT {i+1}/{len(chunks)} ({start_time/60:.1f}-{end_time/60:.1f}min)" if len(chunks) > 1 else None
+                prompt_text = VoxtralPrompts.get_meeting_summary_prompt(sections_list, adjusted_speaker_context, chunk_info, None)
+                
+                # Debug: Afficher le prompt complet envoyé à Voxtral
+                print(f"\n🔍 PROMPT VOXTRAL LOCAL (chunk {i+1}):")
+                print("=" * 80)
+                print(prompt_text, flush=True)
+                print("=" * 80)
 
                 conversation = [{
                     "role": "user", 
@@ -498,6 +586,8 @@ class VoxtralAnalyzer:
                 
                 chunk_summaries.append(f"## Segment {i+1} ({start_time/60:.1f}-{end_time/60:.1f}min)\n\n{chunk_summary}")
                 
+                # Plus de contexte cumulé
+                
                 # Calculer et afficher le temps de traitement
                 chunk_duration = time.time() - chunk_start_time
                 print(f"✅ Chunk {i+1} analysé en {format_duration(chunk_duration)}: {len(chunk_summary)} caractères")
@@ -506,23 +596,127 @@ class VoxtralAnalyzer:
                 print(f"❌ Erreur chunk {i+1}: {e}")
                 chunk_summaries.append(f"**Segment {i+1}:** Erreur de traitement")
             finally:
-                # Nettoyer le fichier temporaire
+                # Nettoyer le fichier temporaire du chunk
                 import os
                 if os.path.exists(chunk_path):
                     os.remove(chunk_path)
-                cleanup_temp_files()
         
-        # Concaténer tous les résumés avec un titre global
-        if language == "english":
-            final_analysis = f"# Meeting Summary\n\n" + "\n\n".join(chunk_summaries)
+        # Traitement final selon le nombre de chunks
+        if chunk_summaries:
+            if len(chunk_summaries) == 1:
+                # Un seul chunk, pas besoin de synthèse
+                final_analysis = chunk_summaries[0]
+                print(f"✅ Analyse directe terminée")
+            else:
+                # Plusieurs chunks : synthèse finale en mode texte
+                print(f"🔄 Synthèse finale en mode texte des {len(chunk_summaries)} segments...")
+                combined_content = "\n\n".join(chunk_summaries)
+                final_analysis = self._synthesize_chunks_final(combined_content, selected_sections)
+                print(f"✅ Analyse avec synthèse finale terminée avec {len(chunk_summaries)} segments")
         else:
-            final_analysis = f"# Résumé de Réunion\n\n" + "\n\n".join(chunk_summaries)
+            final_analysis = "Aucune analyse disponible."
         
         # Calculer et afficher le temps total
         total_duration = time.time() - total_start_time
         print(f"⏱️ Analyse directe totale en {format_duration(total_duration)} pour {duration:.1f}min d'audio")
         
+        # Nettoyage final des fichiers temporaires
+        cleanup_temp_files()
+        
         return {"transcription": final_analysis}
+    
+    def _synthesize_chunks_final(self, combined_content: str, selected_sections: list) -> str:
+        """
+        Fait une synthèse finale en mode texte de tous les segments analysés.
+        
+        Args:
+            combined_content (str): Contenu combiné de tous les segments
+            selected_sections (list): Sections sélectionnées pour le résumé
+            
+        Returns:
+            str: Synthèse finale structurée
+        """
+        try:
+            print(f"🔍 Début synthèse finale - selected_sections: {selected_sections}")
+            print(f"🔍 Taille combined_content: {len(combined_content)} caractères")
+            
+            # Créer le prompt pour la synthèse finale
+            sections_text = ""
+            if selected_sections:
+                from .prompts_config import VoxtralPrompts
+                for section_key in selected_sections:
+                    if section_key in VoxtralPrompts.AVAILABLE_SECTIONS:
+                        section = VoxtralPrompts.AVAILABLE_SECTIONS[section_key]
+                        sections_text += f"\n{section['title']}\n{section['description']}\n"
+                        print(f"✅ Section ajoutée à la synthèse: {section['title']}")
+            
+            synthesis_prompt = f"""Voici les analyses détaillées de plusieurs segments d'une réunion :
+
+{combined_content}
+
+Synthétise maintenant ces analyses en un résumé global cohérent et structuré selon les sections demandées :{sections_text}
+
+Fournis une synthèse unifiée qui combine et résume les informations de tous les segments de manière cohérente."""
+
+            print(f"🔍 Taille du prompt de synthèse: {len(synthesis_prompt)} caractères")
+            print(f"\n🔍 PROMPT DE SYNTHÈSE FINALE:")
+            print("=" * 80)
+            print(synthesis_prompt[:1000] + "..." if len(synthesis_prompt) > 1000 else synthesis_prompt)
+            print("=" * 80)
+            
+            # Vérifier que le modèle est encore disponible
+            if not hasattr(self, 'model') or self.model is None:
+                raise Exception("Le modèle n'est plus disponible (libéré de la mémoire)")
+                
+            print(f"✅ Modèle disponible: {type(self.model)}")
+            print(f"✅ Processor disponible: {type(self.processor)}")
+
+            # Générer la synthèse avec le modèle en mode texte
+            conversation = [{"role": "user", "content": synthesis_prompt}]
+            
+            print(f"🔄 Application du chat template...")
+            inputs = self.processor.apply_chat_template(conversation, return_tensors="pt")
+            print(f"✅ Inputs type: {type(inputs)}")
+            print(f"✅ Inputs keys: {inputs.keys() if hasattr(inputs, 'keys') else 'no keys'}")
+            
+            # Déplacer sur le device approprié
+            if hasattr(inputs, 'keys'):  # BatchFeature ou dict
+                inputs = {k: v.to(self.device) if hasattr(v, 'to') else v for k, v in inputs.items()}
+                if 'input_ids' in inputs:
+                    print(f"✅ Input_ids shape: {inputs['input_ids'].shape}")
+            else:
+                inputs = inputs.to(self.device)
+                print(f"✅ Inputs shape: {inputs.shape}")
+            
+            print(f"🔄 Génération en cours...")
+            outputs = self.model.generate(
+                **inputs if hasattr(inputs, 'keys') else inputs,
+                max_new_tokens=4000,
+                temperature=0.1,
+                do_sample=True,
+                pad_token_id=self.processor.tokenizer.eos_token_id
+            )
+            print(f"✅ Outputs shape: {outputs.shape}")
+            
+            print(f"🔄 Décodage de la réponse...")
+            # Déterminer la longueur des inputs pour le décodage
+            if hasattr(inputs, 'keys') and 'input_ids' in inputs:
+                input_length = inputs['input_ids'].shape[1]
+            else:
+                input_length = inputs.shape[1]
+            
+            final_synthesis = self.processor.tokenizer.decode(outputs[0][input_length:], skip_special_tokens=True).strip()
+            print(f"✅ Synthèse générée: {len(final_synthesis)} caractères")
+            print(f"🔍 Début de la synthèse: {final_synthesis[:200]}..." if len(final_synthesis) > 200 else final_synthesis)
+            
+            return f"# Résumé Global de Réunion\n\n{final_synthesis}\n\n---\n\n## Détails par Segment\n\n{combined_content}"
+            
+        except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            print(f"❌ Erreur détaillée lors de la synthèse finale:")
+            print(error_details)
+            return f"# Résumé de Réunion\n\n⚠️ Erreur lors de la synthèse finale: {str(e)}\n\n## Analyses par Segment\n\n{combined_content}"
     
     def _limit_audio_to_ten_minutes(self, wav_path: str) -> str:
         """

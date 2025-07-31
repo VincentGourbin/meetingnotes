@@ -103,7 +103,7 @@ def on_audio_direct_analysis(
     hf_token,
     model_name="Voxtral-Mini-3B-2507",
     language="french",
-    meeting_type="information",
+    selected_sections=None,
     start_trim=0,
     end_trim=0,
     chunk_duration_minutes=15,
@@ -142,7 +142,7 @@ def on_audio_direct_analysis(
         results = analyzer.analyze_audio_chunks(
             wav_path=wav_path,
             language=language,
-            meeting_type=meeting_type,
+            selected_sections=selected_sections,
             chunk_duration_minutes=chunk_duration_minutes,
             reference_speakers_data=reference_speakers_data
         )
@@ -165,13 +165,13 @@ def on_audio_instruct_summary(
     hf_token,
     model_name="Voxtral-Mini-3B-2507",
     language="french",
-    meeting_type="information",
+    selected_sections=None,
     start_trim=0,
     end_trim=0,
     chunk_duration_minutes=15,
     reference_speakers_data=None
 ):
     return on_audio_direct_analysis(
-        file, hf_token, model_name, language, meeting_type, 
+        file, hf_token, model_name, language, selected_sections, 
         start_trim, end_trim, chunk_duration_minutes, reference_speakers_data
     )

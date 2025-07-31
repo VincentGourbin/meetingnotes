@@ -325,12 +325,112 @@ class VoxtralAPIAnalyzer:
         
         return result
     
+    def _adjust_diarization_timestamps(self, reference_speakers_data: str, start_offset_seconds: float, chunk_duration_seconds: float) -> str:
+        """
+        Ajuste les timestamps de diarisation selon l'offset du segment audio.
+        Ne garde que les segments qui sont réellement dans ce chunk.
+        
+        Args:
+            reference_speakers_data (str): Données de diarisation avec balises
+            start_offset_seconds (float): Décalage en secondes du début du segment
+            chunk_duration_seconds (float): Durée du chunk en secondes
+            
+        Returns:
+            str: Diarisation ajustée avec les nouveaux timestamps
+        """
+        if not reference_speakers_data or not reference_speakers_data.strip():
+            return reference_speakers_data
+        
+        adjusted_lines = []
+        
+        for line in reference_speakers_data.split('\n'):
+            if '<début>' in line and '<fin>' in line:
+                # Extraire les timestamps actuels
+                try:
+                    start_tag_start = line.find('<début>') + len('<début>')
+                    start_tag_end = line.find('</début>')
+                    end_tag_start = line.find('<fin>') + len('<fin>')
+                    end_tag_end = line.find('</fin>')
+                    
+                    original_start = float(line[start_tag_start:start_tag_end])
+                    original_end = float(line[end_tag_start:end_tag_end])
+                    
+                    # Vérifier si le segment a une intersection avec ce chunk
+                    chunk_start = start_offset_seconds
+                    chunk_end = start_offset_seconds + chunk_duration_seconds
+                    
+                    # Segment complètement avant ou après ce chunk ? Ignorer
+                    if original_end <= chunk_start or original_start >= chunk_end:
+                        continue
+                    
+                    # Calculer l'intersection avec le chunk
+                    intersect_start = max(original_start, chunk_start)
+                    intersect_end = min(original_end, chunk_end)
+                    
+                    # Ajuster les timestamps par rapport au début du chunk
+                    adjusted_start = intersect_start - start_offset_seconds
+                    adjusted_end = intersect_end - start_offset_seconds
+                    
+                    # S'assurer que les timestamps sont positifs et dans les limites du chunk
+                    adjusted_start = max(0, adjusted_start)
+                    adjusted_end = min(chunk_duration_seconds, adjusted_end)
+                    
+                    # Seulement inclure si on a encore une durée significative (>0.1s)
+                    if adjusted_end - adjusted_start > 0.1:
+                        # Reconstituer la ligne avec les nouveaux timestamps
+                        adjusted_line = line[:start_tag_start] + f"{adjusted_start:.3f}" + line[start_tag_end:end_tag_start] + f"{adjusted_end:.3f}" + line[end_tag_end:]
+                        adjusted_lines.append(adjusted_line)
+                        
+                except (ValueError, IndexError) as e:
+                    # En cas d'erreur de parsing, garder la ligne originale
+                    print(f"⚠️ Erreur ajustement timestamp: {e}")
+                    adjusted_lines.append(line)
+            else:
+                # Ligne sans timestamp, garder telle quelle
+                adjusted_lines.append(line)
+        
+        return '\n'.join(adjusted_lines)
+    
+    def _synthesize_with_api(self, synthesis_prompt: str) -> str:
+        """
+        Effectue la synthèse finale via l'API Mistral en mode texte.
+        
+        Args:
+            synthesis_prompt (str): Prompt de synthèse
+            
+        Returns:
+            str: Résumé synthétisé
+        """
+        try:
+            from mistralai import Mistral
+            
+            client = Mistral(api_key=self.api_key)
+            
+            # Utiliser le modèle spécifié pour la synthèse
+            response = client.chat.complete(
+                model=self.model_name,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": synthesis_prompt
+                    }
+                ],
+                max_tokens=4000,
+                temperature=0.1
+            )
+            
+            return response.choices[0].message.content.strip()
+            
+        except Exception as e:
+            print(f"❌ Erreur API synthèse: {e}")
+            raise e
+    
     
     def analyze_audio_chunks_api(
         self, 
         wav_path: str, 
         language: str = "french", 
-        meeting_type: str = "information",
+        selected_sections: list = None,
         chunk_duration_minutes: int = 15,
         reference_speakers_data=None
     ) -> Dict[str, str]:
@@ -360,15 +460,22 @@ class VoxtralAPIAnalyzer:
         duration_minutes = len(audio) / (1000 * 60)
         print(f"🎵 Durée audio: {duration_minutes:.1f} minutes")
         
-        # Créer des chunks de temps fixes
+        # Créer des chunks de temps fixes avec overlap de 10 secondes
         chunk_duration = chunk_duration_minutes * 60 * 1000  # Convertir en millisecondes
+        overlap_duration = 10 * 1000  # 10 secondes d'overlap en millisecondes
         chunks = []
         current_time = 0
         
         while current_time < len(audio):
             end_time = min(current_time + chunk_duration, len(audio))
             chunks.append((current_time, end_time))
-            current_time = end_time
+            
+            # Pour le prochain chunk, commencer 10 secondes avant la fin du chunk actuel
+            # sauf si c'est le dernier chunk
+            if end_time < len(audio):
+                current_time = max(0, end_time - overlap_duration)
+            else:
+                break
         
         print(f"📦 Division en {len(chunks)} chunks de {chunk_duration_minutes} minutes")
         
@@ -390,16 +497,35 @@ class VoxtralAPIAnalyzer:
             chunk.export(chunk_path, format="wav")
             
             try:
+                # Ajuster la diarisation selon l'offset temporel du chunk
+                adjusted_speaker_context = ""
+                if reference_speakers_data:
+                    start_offset_seconds = start_ms / 1000.0
+                    chunk_duration_seconds = (end_ms - start_ms) / 1000.0
+                    adjusted_speaker_context = self._adjust_diarization_timestamps(reference_speakers_data, start_offset_seconds, chunk_duration_seconds)
+                
                 # Créer le prompt de résumé structuré direct depuis la config centralisée
-                prompt = VoxtralPrompts.get_meeting_summary_prompt(meeting_type, "")
+                sections_list = selected_sections if selected_sections else ["resume_executif"]
+                
+                # Indiquer que c'est un segment d'un audio plus long seulement s'il y a plusieurs chunks
+                chunk_info = f"SEGMENT {i+1}/{len(chunks)} ({start_ms/60000:.1f}-{end_ms/60000:.1f}min)" if len(chunks) > 1 else None
+                prompt = VoxtralPrompts.get_meeting_summary_prompt(sections_list, adjusted_speaker_context, chunk_info, None)
+                
+                # Debug: Afficher le prompt complet envoyé à Voxtral
+                print(f"\n🔍 PROMPT VOXTRAL API (chunk {i+1}):")
+                print("=" * 80)
+                print(prompt, flush=True)
+                print("=" * 80)
                 
                 # Utiliser l'API Chat avec audio
                 analysis = self._analyze_audio_chunk_api(chunk_path, prompt)
                 
-                print(f"🔍 Debug - Analysis result: {analysis[:200] if analysis else 'None'}...")
                 
                 if analysis and not analysis.startswith("❌"):
                     chunk_analyses.append(f"## Segment {i+1} ({start_ms/60000:.1f}-{end_ms/60000:.1f}min)\n\n{analysis}")
+                    
+                    # Plus de contexte cumulé
+                        
                 else:
                     chunk_analyses.append(f"## Segment {i+1}\n\n❌ Erreur lors de l'analyse de ce segment: {analysis if analysis else 'Résultat vide'}")
                 
@@ -415,17 +541,75 @@ class VoxtralAPIAnalyzer:
                 if os.path.exists(chunk_path):
                     os.remove(chunk_path)
         
-        # Concaténer tous les résumés avec un titre global
-        if language == "english":
-            final_analysis = f"# Meeting Summary\n\n" + "\n\n".join(chunk_analyses)
+        # Traitement final selon le nombre de chunks
+        if chunk_analyses:
+            if len(chunk_analyses) == 1:
+                # Un seul chunk, pas besoin de synthèse
+                final_analysis = chunk_analyses[0]
+                print(f"✅ Analyse directe API terminée")
+            else:
+                # Plusieurs chunks : synthèse finale en mode texte
+                print(f"🔄 Synthèse finale API en mode texte des {len(chunk_analyses)} segments...")
+                combined_content = "\n\n".join(chunk_analyses)
+                final_analysis = self._synthesize_chunks_final_api(combined_content, selected_sections)
+                print(f"✅ Analyse API avec synthèse finale terminée avec {len(chunk_analyses)} segments")
         else:
-            final_analysis = f"# Résumé de Réunion\n\n" + "\n\n".join(chunk_analyses)
+            final_analysis = "Aucune analyse disponible."
         
         # Calculer et afficher le temps total
         total_duration = time.time() - total_start_time
         print(f"⏱️ Analyse directe API totale en {format_duration(total_duration)} pour {duration_minutes:.1f}min d'audio")
         
         return {"transcription": final_analysis}
+    
+    def _synthesize_chunks_final_api(self, combined_content: str, selected_sections: list) -> str:
+        """
+        Fait une synthèse finale en mode texte via l'API de tous les segments analysés.
+        
+        Args:
+            combined_content (str): Contenu combiné de tous les segments
+            selected_sections (list): Sections sélectionnées pour le résumé
+            
+        Returns:
+            str: Synthèse finale structurée
+        """
+        try:
+            # Créer le prompt pour la synthèse finale
+            sections_text = ""
+            if selected_sections:
+                from .prompts_config import VoxtralPrompts
+                for section_key in selected_sections:
+                    if section_key in VoxtralPrompts.AVAILABLE_SECTIONS:
+                        section = VoxtralPrompts.AVAILABLE_SECTIONS[section_key]
+                        sections_text += f"\n{section['title']}\n{section['description']}\n"
+            
+            synthesis_prompt = f"""Voici les analyses détaillées de plusieurs segments d'une réunion :
+
+{combined_content}
+
+Synthétise maintenant ces analyses en un résumé global cohérent et structuré selon les sections demandées :{sections_text}
+
+Fournis une synthèse unifiée qui combine et résume les informations de tous les segments de manière cohérente."""
+
+            # Générer la synthèse avec l'API Mistral en mode texte
+            from mistralai import Mistral
+            
+            client = Mistral(api_key=self.api_key)
+            
+            response = client.chat.complete(
+                model=self.model_name,
+                messages=[{"role": "user", "content": synthesis_prompt}],
+                max_tokens=4000,
+                temperature=0.1
+            )
+            
+            final_synthesis = response.choices[0].message.content.strip()
+            
+            return f"# Résumé Global de Réunion\n\n{final_synthesis}\n\n---\n\n## Détails par Segment\n\n{combined_content}"
+            
+        except Exception as e:
+            print(f"❌ Erreur lors de la synthèse finale API: {e}")
+            return f"# Résumé de Réunion\n\n⚠️ Erreur lors de la synthèse finale API: {str(e)}\n\n## Analyses par Segment\n\n{combined_content}"
     
     def _analyze_audio_chunk_api(self, audio_path: str, prompt: str) -> str:
         """

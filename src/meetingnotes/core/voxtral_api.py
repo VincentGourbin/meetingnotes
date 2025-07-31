@@ -110,7 +110,7 @@ def on_audio_direct_analysis_api(
     mistral_api_key: str,
     model_name: str = "voxtral-mini-latest", 
     language: str = "french",
-    meeting_type: str = "information",
+    selected_sections: list = None,
     chunk_duration_minutes: int = 15,
     reference_speakers_data=None
 ) -> Dict[str, str]:
@@ -140,7 +140,7 @@ def on_audio_direct_analysis_api(
         results = analyzer.analyze_audio_chunks_api(
             wav_path=wav_path,
             language=language,
-            meeting_type=meeting_type,
+            selected_sections=selected_sections,
             chunk_duration_minutes=chunk_duration_minutes,
             reference_speakers_data=reference_speakers_data
         )
