@@ -1,58 +1,79 @@
-# MeetingNotes - Analyse Intelligente de Réunions avec Voxtral
+# MeetingNotes - Intelligent Meeting Analysis with Voxtral
 
-Application web utilisant l'IA **Voxtral de Mistral AI** pour analyser automatiquement vos réunions audio/vidéo avec :
-- **Analyse directe** : Transcription et résumé structuré en une seule étape
-- **3 modes de traitement** : Local (Transformers), MLX (Apple Silicon), API (Cloud)
-- **Modèles quantifiés** : Support 4bit/8bit pour économie mémoire
-- **Diarisation intelligente** : Identification et renommage des locuteurs
-- **Résumés personnalisables** : Sections modulaires selon vos besoins
+Web application using **Voxtral AI from Mistral AI** to automatically analyze your audio/video meetings with:
+- **Direct analysis**: Transcription and structured summary in one step
+- **3 processing modes**: Local (Transformers), MLX (Apple Silicon), API (Cloud)
+- **Quantized models**: 4bit/8bit support for memory efficiency
+- **Smart diarization**: Speaker identification and renaming
+- **Customizable summaries**: Modular sections according to your needs
+- **Language-adaptive**: Automatically detects and responds in meeting language
+- **Centralized UI**: Clean English interface with multilingual analysis
 
-## 🚀 Installation Rapide
+![Meeting Analysis Interface](Assets/meeting%20analysis%20parameters.png)
 
-1. **Clonez le repository et installez les dépendances :**
+## 🚀 Quick Installation
+
+1. **Clone the repository and install dependencies:**
 ```bash
 git clone <repository-url>
 cd meetingnotes
 pip install -r requirements.txt
 ```
 
-2. **Configurez votre token Hugging Face :**
+2. **Configure your Hugging Face token:**
 ```bash
 cp .env.example .env
-# Éditez .env et ajoutez votre token Hugging Face
+# Edit .env and add your Hugging Face token
 ```
 
-3. **Lancez l'application :**
+3. **Launch the application:**
 ```bash
 python main.py
 ```
 
-L'interface web sera accessible sur **http://localhost:7860**
+The web interface will be accessible at **http://localhost:7860**
 
 ## ⚙️ Configuration
 
-### Token Hugging Face (Obligatoire)
-Obtenez un token d'accès sur [Hugging Face](https://huggingface.co/settings/tokens) et ajoutez-le dans `.env` :
+### Hugging Face Token (Required)
+Get an access token from [Hugging Face](https://huggingface.co/settings/tokens) and add it to `.env`:
 ```env
-HUGGINGFACE_TOKEN=votre_token_ici
+HUGGINGFACE_TOKEN=your_token_here
 ```
 
-### Clé API Mistral (Optionnelle)
-Pour utiliser le mode API cloud, obtenez une clé sur [Mistral AI](https://console.mistral.ai/) :
+### Mistral API Key (Optional)
+To use cloud API mode, get a key from [Mistral AI](https://console.mistral.ai/):
 ```env
-MISTRAL_API_KEY=votre_cle_api_mistral
+MISTRAL_API_KEY=your_mistral_api_key
 ```
 
-## 🎯 Fonctionnalités
+## 🎯 Features
 
-### Modes de Traitement
-- **Local (Transformers)** : Traitement sur votre machine avec PyTorch
-- **MLX (Apple Silicon)** : Optimisé pour Mac M1/M2/M3 avec MLX Framework
-- **API (Cloud)** : Utilise l'API Mistral Cloud
+### Processing Modes
 
-### Modèles et Quantification
-| Modèle | Précision | Repository | Usage Mémoire |
-|--------|-----------|------------|---------------|
+Choose the mode that best fits your hardware and needs:
+
+#### Local Mode (Transformers)
+![Local Mode](Assets/local%20mode.png)
+- **Local processing**: Everything runs on your machine with PyTorch
+- **Privacy**: No data sent to external servers
+- **GPU acceleration**: Automatic CUDA/MPS detection
+
+#### MLX Mode (Apple Silicon)
+![MLX Mode](Assets/mlx%20mode.png)
+- **Optimized for Mac**: M1/M2/M3 processors with MLX Framework
+- **Best performance**: Native Apple Silicon acceleration
+- **Memory efficient**: Optimized quantized models
+
+#### API Mode (Cloud)
+![API Mode](Assets/api%20mode.png)
+- **Cloud processing**: Uses Mistral Cloud API
+- **No local resources**: Minimal memory usage
+- **Always up-to-date**: Latest models and improvements
+
+### Models and Quantization
+| Model | Precision | Repository | Memory Usage |
+|-------|-----------|------------|--------------|
 | **Voxtral Mini** | Default | `mistralai/Voxtral-Mini-3B-2507` | ~6GB |
 | **Voxtral Mini** | 8bit | `mzbac/voxtral-mini-3b-8bit` | ~3.5GB |
 | **Voxtral Mini** | 4bit | `mzbac/voxtral-mini-3b-4bit-mixed` | ~2GB |
@@ -60,166 +81,182 @@ MISTRAL_API_KEY=votre_cle_api_mistral
 | **Voxtral Small** | 8bit | `VincentGOURBIN/voxtral-small-8bit` | ~24GB |
 | **Voxtral Small** | 4bit | `VincentGOURBIN/voxtral-small-4bit-mixed` | ~12GB |
 
-### Diarisation des Locuteurs
-- **Identification automatique** : Détection des différents locuteurs avec pyannote.audio
-- **Segments de référence** : Écoute d'échantillons audio pour chaque locuteur
-- **Renommage personnalisé** : Attribution de noms humains aux locuteurs
-- **Intégration contexte** : Utilisation des informations de locuteurs dans les résumés
+### Speaker Diarization
 
-### Résumés Personnalisables
-**Sections modulaires** : Choisissez les sections à inclure selon vos besoins
-- **📄 Résumé exécutif** : Aperçu global de la réunion
-- **💬 Discussions principales** : Sujets principaux abordés
-- **✅ Plan d'action** : Actions, responsabilités, échéances
-- **⚖️ Décisions prises** : Décisions validées
-- **⏭️ Prochaines étapes** : Actions de suivi
-- **📌 Sujets principaux** : Informations présentées
-- **⭐ Points importants** : Insights et données clés
-- **❓ Questions & discussions** : Questions posées et réponses
-- **📝 Éléments de suivi** : Clarifications nécessaires
+![Speaker Diarization](Assets/diarization.png)
 
-**Profils prédéfinis** :
-- **🎯 Profil Action** : Focus sur les tâches et décisions
-- **📊 Profil Information** : Focus sur les données et insights
-- **📋 Profil Complet** : Toutes les sections activées
+- **Automatic identification**: Detection of different speakers with pyannote.audio
+- **Reference segments**: Listen to audio samples for each speaker
+- **Custom renaming**: Assign human names to speakers
+- **Context integration**: Use speaker information in summaries
 
-### Formats Supportés
-- **Audio** : WAV, MP3, M4A, OGG, FLAC
-- **Vidéo** : MP4, AVI, MOV, MKV (extraction automatique de l'audio)
+### Customizable Summaries
+**Modular sections**: Choose the sections to include according to your needs
+- **📄 Executive Summary**: Global overview of the meeting
+- **💬 Main Discussions**: Main topics addressed
+- **✅ Action Plan**: Actions, responsibilities, deadlines
+- **⚖️ Decisions Made**: Validated decisions
+- **⏭️ Next Steps**: Follow-up actions
+- **📌 Main Topics**: Information presented
+- **⭐ Key Points**: Insights and key data
+- **❓ Questions & Discussions**: Questions asked and answers
+- **📝 Follow-up Elements**: Clarifications needed
 
-## 🔧 Utilisation
+**Predefined Profiles**:
+- **🎯 Action Profile**: Focus on tasks and decisions
+- **📊 Information Profile**: Focus on data and insights
+- **📋 Complete Profile**: All sections activated
 
-### 1. Configuration du Mode de Traitement
-1. **Choisissez le mode** : Local, MLX ou API
-2. **Sélectionnez le modèle** : Mini ou Small selon vos besoins
-3. **Choisissez la précision** : Default, 8bit ou 4bit pour optimiser la mémoire
+### Supported Formats
+- **Audio**: WAV, MP3, M4A, OGG, FLAC
+- **Video**: MP4, AVI, MOV, MKV (automatic audio extraction)
 
-### 2. Upload et Options
-- **Fichier** : Audio direct ou vidéo (extraction automatique)
-- **Découpe optionnelle** : Trimming début/fin (laissez vide pour 0)
-- **Taille chunks** : Durée de traitement (5-25 minutes)
+## 🔧 Usage
 
-### 3. Diarisation (Optionnel)
-1. **Analysez les locuteurs** avec pyannote.audio
-2. **Écoutez les segments** de référence de chaque locuteur
-3. **Renommez les locuteurs** avec des noms personnalisés
-4. **Appliquez les renommages** pour un contexte enrichi
+### 1. Processing Mode Configuration
+1. **Choose the mode**: Local, MLX or API
+2. **Select the model**: Mini or Small according to your needs
+3. **Choose precision**: Default, 8bit or 4bit to optimize memory
 
-### 4. Personnalisation du Résumé
-- **Sections modulaires** : Activez seulement les sections nécessaires
-- **Profils rapides** : Action, Information ou Complet
-- **Configuration flexible** : Adaptez le résumé à votre usage
+### 2. Upload and Options
+- **File**: Direct audio or video (automatic extraction)
+- **Optional trimming**: Start/end trimming (leave empty for 0)
 
-### 5. Analyse et Résultats
-Cliquez sur **"Analyser la réunion"** pour obtenir un résumé structuré personnalisé.
+![Trim Options](Assets/trim_options.png)
+
+- **Chunk size**: Processing duration (5-25 minutes)
+
+### 3. Diarization (Optional)
+1. **Analyze speakers** with pyannote.audio
+2. **Listen to reference segments** of each speaker
+3. **Rename speakers** with custom names
+4. **Apply renamings** for enriched context
+
+### 4. Summary Customization
+- **Modular sections**: Enable only necessary sections
+- **Quick profiles**: Action, Information or Complete
+- **Flexible configuration**: Adapt summary to your usage
+
+### 5. Analysis and Results
+Click **"Analyze Meeting"** to get a customized structured summary.
+
+![Meeting Summary](Assets/meeting%20summary.png)
 
 ## 🏗️ Architecture
 
-Le projet suit une architecture modulaire dans `src/meetingnotes/` :
+The project follows a modular architecture in `src/meetingnotes/`:
 
 ```
 src/meetingnotes/
-├── ai/                    # Intelligence Artificielle
-│   ├── voxtral_analyzer.py      # Analyseur Voxtral local (Transformers)
-│   ├── voxtral_api_analyzer.py  # Analyseur Voxtral API
-│   ├── voxtral_mlx_analyzer.py  # Analyseur Voxtral MLX (Apple Silicon)
-│   ├── diarization.py           # Diarisation des locuteurs (pyannote)
-│   ├── memory_manager.py        # Gestion optimisée de la mémoire
-│   └── prompts_config.py        # Configuration centralisée des prompts
-├── audio/                 # Traitement Audio
-│   ├── wav_converter.py         # Conversion de formats
-│   └── normalizer.py            # Normalisation du volume
-├── core/                  # Logique Métier
-│   ├── voxtral_direct.py        # Traitement direct (Transformers)
-│   ├── voxtral_api.py           # Interface API Mistral
-│   └── voxtral_mlx.py           # Interface MLX Apple Silicon
-├── ui/                    # Interface Utilisateur
-│   ├── main.py                  # Interface Gradio principale
-│   └── handlers.py              # Gestionnaires d'événements
-└── utils/                 # Utilitaires
-    ├── __init__.py              # Module utils
-    └── time_formatter.py        # Formatage des durées
+├── ai/                    # Artificial Intelligence
+│   ├── voxtral_analyzer.py      # Local Voxtral analyzer (Transformers)
+│   ├── voxtral_api_analyzer.py  # Voxtral API analyzer
+│   ├── voxtral_mlx_analyzer.py  # Voxtral MLX analyzer (Apple Silicon)
+│   ├── diarization.py           # Speaker diarization (pyannote)
+│   ├── memory_manager.py        # Optimized memory management
+│   └── prompts_config.py        # Centralized prompt configuration
+├── audio/                 # Audio Processing
+│   ├── wav_converter.py         # Format conversion
+│   └── normalizer.py            # Volume normalization
+├── core/                  # Business Logic
+│   ├── voxtral_direct.py        # Direct processing (Transformers)
+│   ├── voxtral_api.py           # Mistral API interface
+│   └── voxtral_mlx.py           # MLX Apple Silicon interface
+├── ui/                    # User Interface
+│   ├── main.py                  # Main Gradio interface
+│   ├── handlers.py              # Event handlers
+│   └── labels.py                # UI labels and text constants
+└── utils/                 # Utilities
+    ├── __init__.py              # Utils module
+    ├── time_formatter.py        # Duration formatting
+    └── token_tracker.py          # Token usage tracking
 ```
 
-Pour plus de détails, consultez [ARCHITECTURE.md](ARCHITECTURE.md).
+For more details, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
-## 🔧 Configuration Avancée
+## 🔧 Advanced Configuration
 
-### Variables d'Environnement
+### Environment Variables
 ```env
-# Obligatoire pour tous les modes
-HUGGINGFACE_TOKEN=votre_token_hf
+# Required for all modes
+HUGGINGFACE_TOKEN=your_hf_token
 
-# Optionnel pour le mode API
-MISTRAL_API_KEY=votre_cle_mistral
+# Optional for API mode
+MISTRAL_API_KEY=your_mistral_key
 ```
 
-### Optimisations selon votre Matériel
-- **Mac M1/M2/M3** : Utilisez le mode MLX pour de meilleures performances
-- **GPU NVIDIA** : Mode Local avec accélération CUDA automatique
-- **CPU seulement** : Privilégiez les modèles 4bit pour économiser la mémoire
-- **Mémoire limitée** : Mini 4bit (~2GB) ou Small 4bit (~12GB)
+### Hardware Optimizations
+- **Mac M1/M2/M3**: Use MLX mode for better performance
+- **NVIDIA GPU**: Local mode with automatic CUDA acceleration
+- **CPU only**: Prefer 4bit models to save memory
+- **Limited memory**: Mini 4bit (~2GB) or Small 4bit (~12GB)
 
-## 🔍 Caractéristiques Techniques
+## 🔍 Technical Features
 
-### Optimisations Mémoire
-- **Modèles pré-quantifiés** : 4bit et 8bit pour réduction mémoire
-- **Gestionnaire de mémoire** : Nettoyage automatique entre les chunks
-- **Support multi-plateforme** : MPS (Apple), CUDA (NVIDIA), CPU optimisé
+### Memory Optimizations
+- **Pre-quantized models**: 4bit and 8bit for memory reduction
+- **Memory manager**: Automatic cleanup between chunks
+- **Multi-platform support**: MPS (Apple), CUDA (NVIDIA), optimized CPU
 
-### Traitement Intelligent
-- **3 modes d'inférence** : Direct audio-chat sans transcription intermédiaire
-- **Chunks adaptatifs** : Division intelligente des longs fichiers avec synthèse
-- **Prompts modulaires** : Sections de résumé personnalisables
-- **Contexte enrichi** : Intégration de la diarisation dans les analyses
+### Intelligent Processing
+- **3 inference modes**: Direct audio-chat without intermediate transcription  
+- **Language-adaptive**: Automatically detects meeting language and responds accordingly
+- **Adaptive chunks**: Smart division of long files with synthesis
+- **Modular prompts**: Customizable summary sections with centralized configuration
+- **Enriched context**: Integration of diarization in analyses
+- **Token tracking**: Comprehensive usage statistics across all processing modes
 
-### Interface Moderne
-- **Interface intuitive** : Sélection séparée modèle/précision
-- **Diarisation interactive** : Écoute et renommage des locuteurs
-- **Sections modulaires** : Personnalisation avancée des résumés
-- **Feedback temps réel** : Indicateurs de progression détaillés
+### Modern Interface
+- **Centralized UI labels**: Clean English interface with maintainable text management
+- **Improved API layout**: API key positioned next to model selection for better UX
+- **Interactive diarization**: Speaker listening and renaming
+- **Modular sections**: Advanced summary customization with preset profiles
+- **Real-time feedback**: Detailed progress indicators and token consumption tracking
 
-## 📦 Dépendances Principales
+## 📦 Main Dependencies
 
-- **gradio** : Interface utilisateur web moderne
-- **torch/torchaudio** : Framework de deep learning (mode Local)
-- **transformers** : Modèles Hugging Face et Voxtral
-- **mlx/mlx-voxtral** : Framework MLX optimisé Apple Silicon (macOS uniquement)
-- **pyannote.audio** : Diarisation des locuteurs
-- **pydub** : Traitement et conversion audio
-- **requests** : Communication avec l'API Mistral
-- **python-dotenv** : Gestion des variables d'environnement
+- **gradio**: Modern web user interface
+- **torch/torchaudio**: Deep learning framework (Local mode)
+- **transformers**: Hugging Face and Voxtral models
+- **mlx/mlx-voxtral**: MLX framework optimized for Apple Silicon (macOS only)
+- **pyannote.audio**: Speaker diarization
+- **pydub**: Audio processing and conversion
+- **requests**: Communication with Mistral API
+- **python-dotenv**: Environment variables management
 
-## 🔒 Sécurité et Confidentialité
+## 🔒 Security and Privacy
 
-- **Traitement local** : Option de traitement entièrement sur votre machine
-- **Variables d'environnement** : Tokens sécurisés via `.env`
-- **Pas de stockage cloud** : Vos fichiers restent locaux
-- **Nettoyage automatique** : Suppression des fichiers temporaires
+- **Local processing**: Option for entirely on-machine processing
+- **Environment variables**: Secure tokens via `.env`
+- **No cloud storage**: Your files remain local
+- **Automatic cleanup**: Temporary files removal
 
-## 🚦 Statut du Projet
+## 🚦 Project Status
 
-✅ **Version v2.0** - Fonctionnalités Avancées
-- **3 modes de traitement** : Local, MLX, API
-- **6 configurations de modèles** : Mini/Small + Default/8bit/4bit  
-- **Diarisation complète** : Identification et renommage des locuteurs
-- **Résumés modulaires** : 9 sections personnalisables
-- **Interface optimisée** : Sélection intuitive modèle/précision
-- **Support multi-plateforme** : Windows, macOS, Linux
+✅ **Version v2.1** - Enhanced User Experience & Language Support
+- **3 processing modes**: Local, MLX, API with improved layout
+- **6 model configurations**: Mini/Small + Default/8bit/4bit  
+- **Complete diarization**: Speaker identification and renaming
+- **Modular summaries**: 9 customizable sections with preset profiles
+- **Language-adaptive AI**: Automatically responds in detected meeting language
+- **Centralized UI management**: Clean English interface with maintainable labels
+- **Token tracking**: Comprehensive usage statistics for all modes
+- **Improved UX**: Better API mode layout and visual organization
+- **Multi-platform support**: Windows, macOS, Linux
 
-## 🤝 Contribution
+## 🤝 Contributing
 
-Pour contribuer au projet :
-1. Fork le repository
-2. Créez une branche feature
-3. Implémentez vos modifications
-4. Ajoutez des tests si nécessaire
-5. Ouvrez une Pull Request
+To contribute to the project:
+1. Fork the repository
+2. Create a feature branch
+3. Implement your changes
+4. Add tests if necessary
+5. Open a Pull Request
 
-## 📄 Licence
+## 📄 License
 
-Ce projet est sous licence MIT. Voir le fichier LICENSE pour plus de détails.
+This project is under MIT license. See the LICENSE file for more details.
 
 ---
 
-**MeetingNotes** - Propulsé par [Voxtral de Mistral AI](https://mistral.ai/) | 🚀 Analyse intelligente de réunions | 💾 Traitement local et cloud sécurisé
+**MeetingNotes** - Powered by [Voxtral from Mistral AI](https://mistral.ai/) | 🚀 Intelligent meeting analysis | 💾 Secure local and cloud processing

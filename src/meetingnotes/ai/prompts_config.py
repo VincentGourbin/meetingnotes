@@ -10,61 +10,62 @@ class VoxtralPrompts:
     """Classe contenant tous les prompts système pour Voxtral."""
     
     # ====================================
-    # SECTIONS DISPONIBLES POUR LES RÉSUMÉS
+    # AVAILABLE SECTIONS FOR SUMMARIES
+    # Note: Titles are in English but the AI will adapt language based on meeting content
     # ====================================
     
     AVAILABLE_SECTIONS = {
         "resume_executif": {
-            "title": "## RÉSUMÉ EXÉCUTIF",
-            "description": "Aperçu du but de ce segment de réunion et des résultats",
+            "title": "## EXECUTIVE SUMMARY",
+            "description": "Overview of the purpose of this meeting segment and its outcomes",
             "default_action": True,
             "default_info": True
         },
         "discussions_principales": {
-            "title": "## DISCUSSIONS PRINCIPALES", 
-            "description": "Sujets principaux abordés et points importants soulevés",
+            "title": "## MAIN DISCUSSIONS", 
+            "description": "Main topics addressed and important points raised",
             "default_action": True,
             "default_info": False
         },
         "sujets_principaux": {
-            "title": "## SUJETS PRINCIPAUX",
-            "description": "Sujets clés discutés et informations présentées", 
+            "title": "## MAIN TOPICS",
+            "description": "Key topics discussed and information presented", 
             "default_action": False,
             "default_info": True
         },
         "plan_action": {
-            "title": "## PLAN D'ACTION",
-            "description": "Liste complète des actions avec :\n- Tâches spécifiques et livrables\n- Responsabilités assignées\n- Échéances et délais\n- Niveaux de priorité",
+            "title": "## ACTION PLAN",
+            "description": "Complete list of actions with:\n- Specific tasks and deliverables\n- Assigned responsibilities\n- Deadlines and timelines\n- Priority levels",
             "default_action": True,
             "default_info": False
         },
         "decisions_prises": {
-            "title": "## DÉCISIONS PRISES",
-            "description": "Toutes les décisions prises pendant ce segment",
+            "title": "## DECISIONS MADE",
+            "description": "All decisions made during this segment",
             "default_action": True,
             "default_info": False
         },
         "points_importants": {
-            "title": "## POINTS IMPORTANTS", 
-            "description": "Découvertes importantes, données ou insights partagés",
+            "title": "## KEY POINTS", 
+            "description": "Important discoveries, data or insights shared",
             "default_action": False,
             "default_info": True
         },
         "questions_discussions": {
             "title": "## QUESTIONS & DISCUSSIONS",
-            "description": "Questions principales posées et discussions tenues",
+            "description": "Main questions asked and discussions held",
             "default_action": False,
             "default_info": True
         },
         "prochaines_etapes": {
-            "title": "## PROCHAINES ÉTAPES",
-            "description": "Actions de suivi et réunions futures planifiées", 
+            "title": "## NEXT STEPS",
+            "description": "Follow-up actions and planned future meetings", 
             "default_action": True,
             "default_info": False
         },
         "elements_suivi": {
-            "title": "## ÉLÉMENTS DE SUIVI",
-            "description": "Informations de suivi ou clarifications nécessaires",
+            "title": "## FOLLOW-UP ELEMENTS",
+            "description": "Follow-up information or clarifications needed",
             "default_action": False,
             "default_info": True
         }
@@ -121,7 +122,6 @@ Concentre-toi sur le contenu de ce segment tout en gardant à l'esprit qu'il fai
         
         # Construction des sections sélectionnées
         sections_text = ""
-        print(f"🔍 Debug sections sélectionnées: {selected_sections}")
         for section_key in selected_sections:
             if section_key in VoxtralPrompts.AVAILABLE_SECTIONS:
                 section = VoxtralPrompts.AVAILABLE_SECTIONS[section_key]
@@ -130,7 +130,16 @@ Concentre-toi sur le contenu de ce segment tout en gardant à l'esprit qu'il fai
             else:
                 print(f"❌ Section inconnue: {section_key}")
         
-        return f"""Écoute ce segment audio de réunion et fournis un résumé structuré complet :{diarization_context}{previous_summary_context}{segment_context}
+        return f"""Écoute attentivement ce segment audio de réunion et fournis un résumé structuré complet.{diarization_context}{previous_summary_context}{segment_context}
+
+INSTRUCTION CRITIQUE - LANGUE DE RÉPONSE :
+- DÉTECTE la langue parlée dans cet audio
+- RÉPONDS OBLIGATOIREMENT dans cette même langue détectée
+- Si l'audio est en français → réponds en français
+- Si l'audio est en anglais → réponds en anglais  
+- Si l'audio est dans une autre langue → réponds dans cette langue
+- N'utilise JAMAIS une autre langue que celle détectée dans l'audio
+
 {sections_text}
 Formate ta réponse en markdown exactement comme montré ci-dessus."""
     
@@ -180,7 +189,11 @@ Ton rôle est de les synthétiser en un résumé global cohérent et structuré.
 ANALYSES DES SEGMENTS À SYNTHÉTISER :
 {all_chunks_text}
 
-IMPORTANT : 
+INSTRUCTION CRITIQUE - LANGUE DE RÉPONSE :
+- DÉTECTE la langue utilisée dans les segments ci-dessus
+- RÉPONDS OBLIGATOIREMENT dans cette même langue détectée
+- Si les segments sont en français → réponds en français
+- Si les segments sont en anglais → réponds en anglais
 - Évite les répétitions entre segments
 - Identifie les éléments récurrents et unifie-les
 - Assure la cohérence temporelle et logique

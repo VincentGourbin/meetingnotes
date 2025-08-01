@@ -26,7 +26,7 @@ import io
 import time
 from .memory_manager import MemoryManager, auto_cleanup, cleanup_temp_files
 from .prompts_config import VoxtralPrompts
-from ..utils import format_duration
+from ..utils import format_duration, token_tracker
 
 
 class VoxtralAnalyzer:
@@ -548,11 +548,6 @@ class VoxtralAnalyzer:
                 chunk_info = f"SEGMENT {i+1}/{len(chunks)} ({start_time/60:.1f}-{end_time/60:.1f}min)" if len(chunks) > 1 else None
                 prompt_text = VoxtralPrompts.get_meeting_summary_prompt(sections_list, adjusted_speaker_context, chunk_info, None)
                 
-                # Debug: Afficher le prompt complet envoyé à Voxtral
-                print(f"\n🔍 PROMPT VOXTRAL LOCAL (chunk {i+1}):")
-                print("=" * 80)
-                print(prompt_text, flush=True)
-                print("=" * 80)
 
                 conversation = [{
                     "role": "user", 
@@ -579,10 +574,15 @@ class VoxtralAnalyzer:
                     )
                 
                 # Décodage du résumé
+                input_tokens = inputs.input_ids.shape[1]
+                output_tokens_count = outputs.shape[1] - input_tokens
+                
                 chunk_summary = self.processor.batch_decode(
                     outputs[:, inputs.input_ids.shape[1]:],
                     skip_special_tokens=True
                 )[0].strip()
+                
+                token_tracker.add_chunk_tokens(input_tokens, output_tokens_count)
                 
                 chunk_summaries.append(f"## Segment {i+1} ({start_time/60:.1f}-{end_time/60:.1f}min)\n\n{chunk_summary}")
                 
@@ -620,6 +620,9 @@ class VoxtralAnalyzer:
         total_duration = time.time() - total_start_time
         print(f"⏱️ Analyse directe totale en {format_duration(total_duration)} pour {duration:.1f}min d'audio")
         
+        # Print token usage summary
+        token_tracker.print_summary()
+        
         # Nettoyage final des fichiers temporaires
         cleanup_temp_files()
         
@@ -637,8 +640,6 @@ class VoxtralAnalyzer:
             str: Synthèse finale structurée
         """
         try:
-            print(f"🔍 Début synthèse finale - selected_sections: {selected_sections}")
-            print(f"🔍 Taille combined_content: {len(combined_content)} caractères")
             
             # Créer le prompt pour la synthèse finale
             sections_text = ""
@@ -654,15 +655,16 @@ class VoxtralAnalyzer:
 
 {combined_content}
 
+INSTRUCTION CRITIQUE - LANGUE DE RÉPONSE :
+- DÉTECTE la langue utilisée dans les segments ci-dessus
+- RÉPONDS OBLIGATOIREMENT dans cette même langue détectée
+- Si les segments sont en français → réponds en français
+- Si les segments sont en anglais → réponds en anglais
+
 Synthétise maintenant ces analyses en un résumé global cohérent et structuré selon les sections demandées :{sections_text}
 
 Fournis une synthèse unifiée qui combine et résume les informations de tous les segments de manière cohérente."""
 
-            print(f"🔍 Taille du prompt de synthèse: {len(synthesis_prompt)} caractères")
-            print(f"\n🔍 PROMPT DE SYNTHÈSE FINALE:")
-            print("=" * 80)
-            print(synthesis_prompt[:1000] + "..." if len(synthesis_prompt) > 1000 else synthesis_prompt)
-            print("=" * 80)
             
             # Vérifier que le modèle est encore disponible
             if not hasattr(self, 'model') or self.model is None:
@@ -705,9 +707,10 @@ Fournis une synthèse unifiée qui combine et résume les informations de tous l
             else:
                 input_length = inputs.shape[1]
             
+            output_tokens_count = outputs.shape[1] - input_length
             final_synthesis = self.processor.tokenizer.decode(outputs[0][input_length:], skip_special_tokens=True).strip()
-            print(f"✅ Synthèse générée: {len(final_synthesis)} caractères")
-            print(f"🔍 Début de la synthèse: {final_synthesis[:200]}..." if len(final_synthesis) > 200 else final_synthesis)
+            
+            token_tracker.add_synthesis_tokens(input_length, output_tokens_count)
             
             return f"# Résumé Global de Réunion\n\n{final_synthesis}\n\n---\n\n## Détails par Segment\n\n{combined_content}"
             
@@ -878,7 +881,6 @@ Fournis une synthèse unifiée qui combine et résume les informations de tous l
             matches = re.findall(table_pattern, analysis_result)
             
             if not matches:
-                print("⚠️ Aucun tableau détecté, retour du résultat original")
                 return analysis_result
             
             # Créer les extraits audio et enrichir le tableau

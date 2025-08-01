@@ -29,6 +29,7 @@ from .handlers import (
     handle_speaker_selection,
     handle_speaker_rename
 )
+from .labels import UILabels
 
 # Charger les variables d'environnement depuis le fichier .env
 load_dotenv()
@@ -46,7 +47,7 @@ def main():
     # Récupérer le token Hugging Face depuis les variables d'environnement
     hf_token = os.environ.get("HUGGINGFACE_TOKEN")
     if hf_token is None:
-        raise ValueError("La variable d'environnement HUGGINGFACE_TOKEN n'est pas définie.")
+        raise ValueError("HUGGINGFACE_TOKEN environment variable is not defined.")
 
     # Configuration du thème Glass personnalisé
     custom_glass_theme = gr.themes.Glass(
@@ -59,7 +60,7 @@ def main():
     
     with gr.Blocks(
         theme=custom_glass_theme,
-        title="MeetingNotes - Analyse IA avec Voxtral",
+        title="MeetingNotes - AI Analysis with Voxtral",
         css="""
         .gradio-container {
             max-width: 1200px !important;
@@ -87,123 +88,121 @@ def main():
         }
         """
     ) as demo:
-        # En-tête principal avec style
+        # Main header with style
         with gr.Column(elem_classes="main-header"):
             gr.Markdown(
-                """
-                # 🎙️ MeetingNotes
-                ### Analyse intelligente de réunions avec IA
-                Propulsé par Voxtral
+                f"""
+                # {UILabels.MAIN_TITLE}
+                {UILabels.MAIN_SUBTITLE}
+                {UILabels.MAIN_DESCRIPTION}
                 """,
                 elem_classes="header-content"
             )
 
-        # Section mode de traitement (en haut)
+        # Processing mode section (top)
         with gr.Column(elem_classes="processing-section"):
-            gr.Markdown("### 🎯 Mode de traitement")
+            gr.Markdown(UILabels.PROCESSING_MODE_TITLE)
             
-            # Mode de traitement
+            # Processing mode
             processing_mode = gr.Radio(
-                choices=["Local", "MLX", "API"],
-                value="Local",
-                label="Mode de traitement",
-                info="Local: Transformers | MLX: Apple Silicon optimisé | API: Cloud Mistral"
+                choices=[UILabels.MODE_LOCAL, UILabels.MODE_MLX, UILabels.MODE_API],
+                value=UILabels.MODE_LOCAL,
+                label=UILabels.PROCESSING_MODE_LABEL,
+                info=UILabels.PROCESSING_MODE_INFO
             )
             
-            # Choix du modèle selon le mode
+            # Model selection according to mode
             with gr.Row():
                 with gr.Column():
-                    # Modèles locaux (visible par défaut)
+                    # Local models (visible by default)
                     local_model_choice = gr.Radio(
                         choices=[
-                            "Voxtral-Mini-3B-2507", 
-                            "Voxtral-Small-24B-2507"
+                            UILabels.MODEL_MINI, 
+                            UILabels.MODEL_SMALL
                         ],
-                        value="Voxtral-Mini-3B-2507",
-                        label="🤖 Modèle local",
-                        info="Mini: Plus rapide | Small: Plus précis, plus de mémoire",
+                        value=UILabels.MODEL_MINI,
+                        label=UILabels.LOCAL_MODEL_LABEL,
+                        info=UILabels.LOCAL_MODEL_INFO,
                         visible=True
                     )
                     
-                    # Modèles MLX (caché par défaut)
+                    # MLX models (hidden by default)
                     mlx_model_choice = gr.Radio(
                         choices=[
-                            "Voxtral-Mini-3B-2507",
-                            "Voxtral-Small-24B-2507"
+                            UILabels.MODEL_MINI,
+                            UILabels.MODEL_SMALL
                         ],
-                        value="Voxtral-Mini-3B-2507",
-                        label="🚀 Modèle MLX",
-                        info="Mini: Plus rapide | Small: Plus précis, plus de mémoire",
+                        value=UILabels.MODEL_MINI,
+                        label=UILabels.MLX_MODEL_LABEL,
+                        info=UILabels.MLX_MODEL_INFO,
                         visible=False
                     )
                 
                 with gr.Column():
-                    # Précision/quantification (visible pour local et MLX)
+                    # Precision/quantization (visible for local and MLX)
                     local_precision_choice = gr.Radio(
                         choices=[
-                            "Default",
-                            "8bit", 
-                            "4bit"
+                            UILabels.PRECISION_DEFAULT,
+                            UILabels.PRECISION_8BIT, 
+                            UILabels.PRECISION_4BIT
                         ],
-                        value="8bit",
-                        label="⚡ Précision locale",
-                        info="Default: Qualité max | 8bit: Bon compromis | 4bit: Économie mémoire",
+                        value=UILabels.PRECISION_8BIT,
+                        label=UILabels.LOCAL_PRECISION_LABEL,
+                        info=UILabels.LOCAL_PRECISION_INFO,
                         visible=True
                     )
                     
-                    # Précision MLX (caché par défaut)
+                    # MLX precision (hidden by default)
                     mlx_precision_choice = gr.Radio(
                         choices=[
-                            "Default",
-                            "8bit",
-                            "4bit"
+                            UILabels.PRECISION_DEFAULT,
+                            UILabels.PRECISION_8BIT,
+                            UILabels.PRECISION_4BIT
                         ],
-                        value="8bit",
-                        label="⚡ Précision MLX",
-                        info="Default: Qualité max | 8bit: Bon compromis | 4bit: Économie mémoire",
+                        value=UILabels.PRECISION_8BIT,
+                        label=UILabels.MLX_PRECISION_LABEL,
+                        info=UILabels.MLX_PRECISION_INFO,
                         visible=False
                     )
                 
-                # Variables fantômes supprimées
-                
-                # Modèles API (caché par défaut)
-                api_model_choice = gr.Radio(
-                    choices=[
-                        "voxtral-mini-latest",
-                        "voxtral-small-latest"
-                    ],
-                    value="voxtral-mini-latest",
-                    label="🌐 Modèle API",
-                    info="Mini: Plus rapide, moins cher | Small: Plus précis, plus cher",
-                    visible=False
-                )
+                # API models and key section (hidden by default)
+                with gr.Column(visible=False) as api_section:
+                    with gr.Row():
+                        with gr.Column(scale=1):
+                            api_model_choice = gr.Radio(
+                                choices=[
+                                    UILabels.API_MODEL_MINI,
+                                    UILabels.API_MODEL_SMALL
+                                ],
+                                value=UILabels.API_MODEL_MINI,
+                                label=UILabels.API_MODEL_LABEL,
+                                info=UILabels.API_MODEL_INFO
+                            )
+                        with gr.Column(scale=1):
+                            mistral_api_key_direct = gr.Textbox(
+                                label=UILabels.API_KEY_LABEL,
+                                type="password",
+                                placeholder=UILabels.API_KEY_PLACEHOLDER,
+                                info=UILabels.API_KEY_INFO
+                            )
 
-            # Champ API Key (caché par défaut)
-            mistral_api_key_direct = gr.Textbox(
-                label="🔑 Clé API Mistral",
-                type="password",
-                placeholder="Entrez votre clé API Mistral...",
-                visible=False,
-                info="Requise pour utiliser l'API Mistral"
-            )
-
-        # Sélection du mode d'entrée
+        # Input mode selection
         with gr.Column(elem_classes="processing-section"):
-            gr.Markdown("### 📝 Mode d'entrée")
+            gr.Markdown(UILabels.INPUT_MODE_TITLE)
             
             input_mode = gr.Radio(
-                choices=["🎵 Audio", "🎬 Vidéo"], 
-                value="🎵 Audio",
-                label="Type de fichier",
-                info="Audio: pour fichiers .wav, .mp3, etc. | Vidéo: pour fichiers .mp4, .avi, etc."
+                choices=[UILabels.INPUT_MODE_AUDIO, UILabels.INPUT_MODE_VIDEO], 
+                value=UILabels.INPUT_MODE_AUDIO,
+                label=UILabels.INPUT_MODE_LABEL,
+                info=UILabels.INPUT_MODE_INFO
             )
 
         # Section Audio (mode par défaut)
         with gr.Column(elem_classes="processing-section") as audio_section:
-            gr.Markdown("### 🎵 Mode Audio")
+            gr.Markdown(UILabels.AUDIO_MODE_TITLE)
             
             audio_input = gr.Audio(
-                label="🎙️ Enregistrement ou fichier audio",
+                label=UILabels.AUDIO_INPUT_LABEL,
                 type="filepath",
                 show_label=True,
                 interactive=True
@@ -211,73 +210,73 @@ def main():
 
         # Section Vidéo (cachée par défaut)
         with gr.Column(elem_classes="processing-section", visible=False) as video_section:
-            gr.Markdown("### 🎬 Mode Vidéo")
+            gr.Markdown(UILabels.VIDEO_MODE_TITLE)
             
             video_input = gr.File(
-                label="📁 Fichier vidéo",
+                label=UILabels.VIDEO_INPUT_LABEL,
                 file_types=["video"]
             )
             
             btn_extract_audio = gr.Button(
-                "🔄 Extraire l'audio et basculer en mode Audio",
+                UILabels.EXTRACT_AUDIO_BUTTON,
                 variant="secondary",
                 size="lg"
             )
 
         # Section options de trim (masquable)
         with gr.Column(elem_classes="processing-section"):
-            with gr.Accordion("✂️ Options de découpe (optionnel)", open=False):
+            with gr.Accordion(UILabels.TRIM_OPTIONS_TITLE, open=False):
                 with gr.Row():
                     start_trim_input = gr.Number(
-                        label="⏪ Enlever X secondes au début", 
+                        label=UILabels.START_TRIM_LABEL, 
                         value=0,
                         minimum=0,
                         maximum=3600,
-                        info="Nombre de secondes à supprimer au début du fichier"
+                        info=UILabels.START_TRIM_INFO
                     )
                     end_trim_input = gr.Number(
-                        label="⏩ Enlever X secondes à la fin", 
+                        label=UILabels.END_TRIM_LABEL, 
                         value=0,
                         minimum=0,
                         maximum=3600,
-                        info="Nombre de secondes à supprimer à la fin du fichier"
+                        info=UILabels.END_TRIM_INFO
                     )
 
         # Section diarisation (masquable)
         with gr.Column(elem_classes="processing-section"):
-            with gr.Accordion("👥 Identification des locuteurs (optionnel)", open=False):
-                gr.Markdown("🔍 **Diarisation automatique** : Analyse des différents locuteurs présents dans l'audio avec pyannote.")
+            with gr.Accordion(UILabels.DIARIZATION_TITLE, open=False):
+                gr.Markdown(UILabels.DIARIZATION_DESCRIPTION)
                 
                 with gr.Row():
                     num_speakers_input = gr.Number(
-                        label="👤 Nombre de locuteurs (optionnel)",
+                        label=UILabels.NUM_SPEAKERS_LABEL,
                         value=None,
                         minimum=1,
                         maximum=10,
-                        info="Laissez vide pour détection automatique",
-                        placeholder="Auto"
+                        info=UILabels.NUM_SPEAKERS_INFO,
+                        placeholder=UILabels.NUM_SPEAKERS_PLACEHOLDER
                     )
                 
                 btn_diarize = gr.Button(
-                    "🎤 Analyser les locuteurs",
+                    UILabels.DIARIZE_BUTTON,
                     variant="secondary",
                     size="lg"
                 )
                 
                 
                 # Section segments de référence
-                gr.Markdown("### 🎵 Segments de référence")
-                gr.Markdown("Cliquez sur un locuteur pour écouter son segment de référence :")
+                gr.Markdown(UILabels.REFERENCE_SEGMENTS_TITLE)
+                gr.Markdown(UILabels.REFERENCE_SEGMENTS_DESCRIPTION)
                 
                 speaker_buttons = gr.Radio(
-                    label="👥 Locuteurs détectés",
+                    label=UILabels.SPEAKERS_DETECTED_LABEL,
                     choices=[],
                     visible=False,
-                    info="Sélectionnez un locuteur pour écouter son segment"
+                    info=UILabels.SPEAKERS_DETECTED_INFO
                 )
                 
                 reference_audio_player = gr.Audio(
-                    label="🔊 Segment de référence",
+                    label=UILabels.REFERENCE_AUDIO_LABEL,
                     type="filepath",
                     interactive=False,
                     visible=True
@@ -285,35 +284,35 @@ def main():
                 
                 # Section renommage des locuteurs (cachée par défaut)
                 with gr.Column(visible=False) as rename_section:
-                    gr.Markdown("### ✏️ Renommer un locuteur")
+                    gr.Markdown(UILabels.SPEAKER_RENAME_TITLE)
                     
                     with gr.Row():
                         speaker_name_input = gr.Textbox(
-                            label="📝 Nouveau nom",
-                            placeholder="Entrez le nom du locuteur (ex: Jean, Marie...)",
-                            info="Le nom remplacera l'ID du locuteur sélectionné"
+                            label=UILabels.SPEAKER_NAME_LABEL,
+                            placeholder=UILabels.SPEAKER_NAME_PLACEHOLDER,
+                            info=UILabels.SPEAKER_NAME_INFO
                         )
                         
                     btn_apply_rename = gr.Button(
-                        "✅ Appliquer tous les renommages",
+                        UILabels.APPLY_RENAME_BUTTON,
                         variant="primary",
                         size="sm"
                     )
                     
                     # Indicateur des locuteurs identifiés
                     renamed_speakers_output = gr.Textbox(
-                        label="👥 Locuteurs identifiés",
+                        label=UILabels.IDENTIFIED_SPEAKERS_LABEL,
                         value="",
                         lines=5,
-                        info="Liste des locuteurs détectés avec leurs noms personnalisés",
+                        info=UILabels.IDENTIFIED_SPEAKERS_INFO,
                         interactive=False,
                         visible=False
                     )
 
         # Section d'analyse principale
         with gr.Column(elem_classes="processing-section"):
-            gr.Markdown("### ⚡ Analyse de réunion")
-            gr.Markdown("💡 **Voxtral IA** : Transcription et résumé structuré intelligent de votre réunion.")
+            gr.Markdown(UILabels.MAIN_ANALYSIS_TITLE)
+            gr.Markdown(UILabels.MAIN_ANALYSIS_DESCRIPTION)
             
             # Contrôle taille des chunks
             chunk_duration_slider = gr.Slider(
@@ -321,85 +320,85 @@ def main():
                 maximum=25,  # Maximum actuel du modèle
                 value=15,
                 step=5,
-                label="📦 Taille des morceaux (minutes)",
-                info="Durée de chaque chunk audio à traiter séparément"
+                label=UILabels.CHUNK_DURATION_LABEL,
+                info=UILabels.CHUNK_DURATION_INFO
             )
             
             # Configuration des sections de résumé
-            gr.Markdown("### 📋 Sections du résumé")
-            gr.Markdown("Personnalisez les sections à inclure dans votre résumé :")
+            gr.Markdown(UILabels.SUMMARY_SECTIONS_TITLE)
+            gr.Markdown(UILabels.SUMMARY_SECTIONS_DESCRIPTION)
             
             # Boutons de présélection rapide
             with gr.Row():
-                btn_preset_action = gr.Button("🎯 Profil Action", variant="secondary", size="sm")
-                btn_preset_info = gr.Button("📊 Profil Information", variant="secondary", size="sm")
-                btn_preset_complet = gr.Button("📋 Profil Complet", variant="secondary", size="sm")
+                btn_preset_action = gr.Button(UILabels.PRESET_ACTION_BUTTON, variant="secondary", size="sm")
+                btn_preset_info = gr.Button(UILabels.PRESET_INFO_BUTTON, variant="secondary", size="sm")
+                btn_preset_complet = gr.Button(UILabels.PRESET_COMPLETE_BUTTON, variant="secondary", size="sm")
             
             with gr.Row():
                 with gr.Column():
-                    gr.Markdown("**🎯 Sections orientées action**")
+                    gr.Markdown(UILabels.ACTION_SECTIONS_TITLE)
                     section_resume_executif = gr.Checkbox(
-                        label="📄 Résumé exécutif", 
+                        label=UILabels.SECTION_EXECUTIVE_SUMMARY, 
                         value=True,
-                        info="Aperçu global de la réunion"
+                        info=UILabels.SECTION_EXECUTIVE_SUMMARY_INFO
                     )
                     section_discussions = gr.Checkbox(
-                        label="💬 Discussions principales", 
+                        label=UILabels.SECTION_MAIN_DISCUSSIONS, 
                         value=True,
-                        info="Sujets principaux abordés"
+                        info=UILabels.SECTION_MAIN_DISCUSSIONS_INFO
                     )
                     section_plan_action = gr.Checkbox(
-                        label="✅ Plan d'action", 
+                        label=UILabels.SECTION_ACTION_PLAN, 
                         value=True,
-                        info="Actions, responsabilités, échéances"
+                        info=UILabels.SECTION_ACTION_PLAN_INFO
                     )
                     section_decisions = gr.Checkbox(
-                        label="⚖️ Décisions prises", 
+                        label=UILabels.SECTION_DECISIONS, 
                         value=True,
-                        info="Décisions validées"
+                        info=UILabels.SECTION_DECISIONS_INFO
                     )
                     section_prochaines_etapes = gr.Checkbox(
-                        label="⏭️ Prochaines étapes", 
+                        label=UILabels.SECTION_NEXT_STEPS, 
                         value=True,
-                        info="Actions de suivi"
+                        info=UILabels.SECTION_NEXT_STEPS_INFO
                     )
                 
                 with gr.Column():
-                    gr.Markdown("**📊 Sections orientées information**")
+                    gr.Markdown(UILabels.INFO_SECTIONS_TITLE)
                     section_sujets_principaux = gr.Checkbox(
-                        label="📌 Sujets principaux", 
+                        label=UILabels.SECTION_MAIN_TOPICS, 
                         value=False,
-                        info="Informations présentées"
+                        info=UILabels.SECTION_MAIN_TOPICS_INFO
                     )
                     section_points_importants = gr.Checkbox(
-                        label="⭐ Points importants", 
+                        label=UILabels.SECTION_KEY_POINTS, 
                         value=False,
-                        info="Insights et données clés"
+                        info=UILabels.SECTION_KEY_POINTS_INFO
                     )
                     section_questions = gr.Checkbox(
-                        label="❓ Questions & discussions", 
+                        label=UILabels.SECTION_QUESTIONS, 
                         value=False,
-                        info="Questions posées et réponses"
+                        info=UILabels.SECTION_QUESTIONS_INFO
                     )
                     section_elements_suivi = gr.Checkbox(
-                        label="📝 Éléments de suivi", 
+                        label=UILabels.SECTION_FOLLOW_UP, 
                         value=False,
-                        info="Clarifications nécessaires"
+                        info=UILabels.SECTION_FOLLOW_UP_INFO
                     )
             
             btn_direct_transcribe = gr.Button(
-                "⚡ Analyser la réunion", 
+                UILabels.ANALYZE_BUTTON, 
                 variant="primary",
                 size="lg"
             )
 
         # Section résultats simplifiée
         with gr.Column(elem_classes="results-section"):
-            gr.Markdown("### 📋 Résumé de la réunion")
+            gr.Markdown(UILabels.RESULTS_TITLE)
             
             final_summary_output = gr.Markdown(
-                value="Le résumé structuré apparaîtra ici après l'analyse...",
-                label="📄 Résumé structuré de la réunion",
+                value=UILabels.RESULTS_PLACEHOLDER,
+                label=UILabels.RESULTS_LABEL,
                 height=500
             )
 
@@ -434,14 +433,13 @@ def main():
                 gr.update(visible=is_local),    # local_precision_choice
                 gr.update(visible=is_mlx),      # mlx_model_choice
                 gr.update(visible=is_mlx),      # mlx_precision_choice
-                gr.update(visible=is_api),      # api_model_choice  
-                gr.update(visible=is_api)       # mistral_api_key_direct
+                gr.update(visible=is_api)       # api_section (contient modèle + API key)
             )
         
         processing_mode.change(
             fn=handle_processing_mode_change,
             inputs=[processing_mode],
-            outputs=[local_model_choice, local_precision_choice, mlx_model_choice, mlx_precision_choice, api_model_choice, mistral_api_key_direct]
+            outputs=[local_model_choice, local_precision_choice, mlx_model_choice, mlx_precision_choice, api_section]
         )
 
         # Fonctions de présélection des sections
@@ -593,8 +591,8 @@ def main():
             gr.Markdown(
                 """
                 ---
-                **MeetingNotes** | Propulsé par [Voxtral](https://mistral.ai/) | 
-                🚀 Analyse intelligente de réunions | 💾 Traitement local et cloud sécurisé
+                **MeetingNotes** | Powered by [Voxtral](https://mistral.ai/) | 
+                🚀 Intelligent meeting analysis | 💾 Secure local and cloud processing
                 """,
                 elem_classes="footer-info"
             )

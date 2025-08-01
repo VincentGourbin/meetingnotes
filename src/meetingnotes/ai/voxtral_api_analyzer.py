@@ -22,7 +22,7 @@ import math
 import os
 
 from .prompts_config import VoxtralPrompts
-from ..utils import format_duration
+from ..utils import format_duration, token_tracker
 
 
 class VoxtralAPIAnalyzer:
@@ -455,6 +455,10 @@ class VoxtralAPIAnalyzer:
         # Mesurer le temps total de traitement
         total_start_time = time.time()
         
+        # Initialize token tracker for API mode
+        token_tracker.reset()
+        token_tracker.set_mode("API")
+        
         # Obtenir la durée audio
         audio = AudioSegment.from_file(wav_path)
         duration_minutes = len(audio) / (1000 * 60)
@@ -511,11 +515,6 @@ class VoxtralAPIAnalyzer:
                 chunk_info = f"SEGMENT {i+1}/{len(chunks)} ({start_ms/60000:.1f}-{end_ms/60000:.1f}min)" if len(chunks) > 1 else None
                 prompt = VoxtralPrompts.get_meeting_summary_prompt(sections_list, adjusted_speaker_context, chunk_info, None)
                 
-                # Debug: Afficher le prompt complet envoyé à Voxtral
-                print(f"\n🔍 PROMPT VOXTRAL API (chunk {i+1}):")
-                print("=" * 80)
-                print(prompt, flush=True)
-                print("=" * 80)
                 
                 # Utiliser l'API Chat avec audio
                 analysis = self._analyze_audio_chunk_api(chunk_path, prompt)
@@ -560,6 +559,9 @@ class VoxtralAPIAnalyzer:
         total_duration = time.time() - total_start_time
         print(f"⏱️ Analyse directe API totale en {format_duration(total_duration)} pour {duration_minutes:.1f}min d'audio")
         
+        # Print token usage summary
+        token_tracker.print_summary()
+        
         return {"transcription": final_analysis}
     
     def _synthesize_chunks_final_api(self, combined_content: str, selected_sections: list) -> str:
@@ -587,6 +589,12 @@ class VoxtralAPIAnalyzer:
 
 {combined_content}
 
+INSTRUCTION CRITIQUE - LANGUE DE RÉPONSE :
+- DÉTECTE la langue utilisée dans les segments ci-dessus
+- RÉPONDS OBLIGATOIREMENT dans cette même langue détectée
+- Si les segments sont en français → réponds en français
+- Si les segments sont en anglais → réponds en anglais
+
 Synthétise maintenant ces analyses en un résumé global cohérent et structuré selon les sections demandées :{sections_text}
 
 Fournis une synthèse unifiée qui combine et résume les informations de tous les segments de manière cohérente."""
@@ -604,6 +612,12 @@ Fournis une synthèse unifiée qui combine et résume les informations de tous l
             )
             
             final_synthesis = response.choices[0].message.content.strip()
+            
+            # Track synthesis tokens if usage information is available
+            if hasattr(response, 'usage') and response.usage:
+                synthesis_input_tokens = response.usage.prompt_tokens or 0
+                synthesis_output_tokens = response.usage.completion_tokens or 0
+                token_tracker.add_synthesis_tokens(synthesis_input_tokens, synthesis_output_tokens)
             
             return f"# Résumé Global de Réunion\n\n{final_synthesis}\n\n---\n\n## Détails par Segment\n\n{combined_content}"
             
@@ -677,7 +691,7 @@ Fournis une synthèse unifiée qui combine et résume les informations de tous l
                 output_tokens = usage.get("completion_tokens", 0)
                 total_tokens = usage.get("total_tokens", 0)
                 
-                print(f"📊 Stats API - Input: {input_tokens} tokens, Output: {output_tokens} tokens, Total: {total_tokens} tokens")
+                token_tracker.add_chunk_tokens(input_tokens, output_tokens)
                 
                 return analysis.strip()
             else:
@@ -816,7 +830,6 @@ Fournis une synthèse unifiée qui combine et résume les informations de tous l
             matches = re.findall(table_pattern, analysis_result)
             
             if not matches:
-                print("⚠️ Aucun tableau détecté, retour du résultat original")
                 return analysis_result
             
             # Créer les extraits audio et enrichir le tableau

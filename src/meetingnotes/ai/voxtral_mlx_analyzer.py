@@ -21,7 +21,7 @@ from typing import List, Dict, Tuple, Optional
 import math
 
 from .prompts_config import VoxtralPrompts
-from ..utils import format_duration
+from ..utils import format_duration, token_tracker
 
 
 class VoxtralMLXAnalyzer:
@@ -202,15 +202,11 @@ class VoxtralMLXAnalyzer:
             str: Résultat de l'analyse
         """
         try:
-            print(f"🔍 MLX: Chargement du modèle...")
             # S'assurer que le modèle est chargé
             self._load_model()
             
-            print(f"🔍 MLX: Vérification fichier audio {audio_path}")
             if not os.path.exists(audio_path):
                 return f"❌ Fichier audio non trouvé: {audio_path}"
-            
-            print(f"🔍 MLX: Analyse directe audio-chat en cours...")
             
             # Construire la conversation avec contenu multimodal (texte + audio)
             conversation = [
@@ -223,11 +219,9 @@ class VoxtralMLXAnalyzer:
                 }
             ]
             
-            print(f"🔍 MLX: Application du template de conversation...")
             # Appliquer le template de chat pour formater les inputs
             inputs = self.processor.apply_chat_template(conversation, return_tensors="mlx")
             
-            print(f"🔍 MLX: Génération de la réponse...")
             # Générer la réponse avec le modèle MLX
             outputs = self.model.generate(
                 inputs["input_ids"],
@@ -236,12 +230,12 @@ class VoxtralMLXAnalyzer:
                 do_sample=False,  # Déterministe pour plus de cohérence
                 temperature=0.1
             )
-            
-            print(f"🔍 MLX: Décodage de la réponse...")
             # Décoder la réponse en excluant les tokens d'entrée
             # Convertir de MLX vers numpy/list avant décodage
             import mlx.core as mx
-            output_tokens = outputs[0][inputs["input_ids"].shape[1]:]
+            input_tokens_count = inputs["input_ids"].shape[1]
+            output_tokens = outputs[0][input_tokens_count:]
+            output_tokens_count = len(output_tokens)
             output_tokens_numpy = mx.array(output_tokens).tolist()
             
             response = self.processor.tokenizer.decode(
@@ -249,8 +243,7 @@ class VoxtralMLXAnalyzer:
                 skip_special_tokens=True
             ).strip()
             
-            print(f"🔍 MLX: Analyse directe complétée: {len(response)} caractères")
-            print(f"🔍 Début de la réponse: {response[:200]}...")
+            token_tracker.add_chunk_tokens(input_tokens_count, output_tokens_count)
             
             if not response or len(response.strip()) < 10:
                 return "❌ Réponse vide ou trop courte du modèle MLX"
@@ -288,6 +281,10 @@ class VoxtralMLXAnalyzer:
         # Mesurer le temps total de traitement
         total_start_time = time.time()
         
+        # Initialize token tracker for MLX mode
+        token_tracker.reset()
+        token_tracker.set_mode("MLX")
+        
         # Obtenir la durée audio
         duration = self._get_audio_duration(wav_path)
         print(f"🎵 Durée audio: {duration:.1f} minutes")
@@ -299,26 +296,17 @@ class VoxtralMLXAnalyzer:
             # Ajuster les timestamps de diarisation pour le fichier complet
             adjusted_speaker_context = ""
             if reference_speakers_data:
-                print(f"🔍 Diarisation fournie: {len(reference_speakers_data)} caractères")
                 adjusted_speaker_context = self._adjust_diarization_timestamps(
                     reference_speakers_data, 0, duration * 60
                 )
             else:
-                print(f"🔍 Pas de diarisation fournie")
+                adjusted_speaker_context = ""
             
             # Utiliser audio instruct mode pour analyse directe depuis la config centralisée
             sections_list = selected_sections if selected_sections else ["resume_executif"]
-            print(f"🔍 Sections sélectionnées: {sections_list}")
             
             # Pas de chunk_info pour un fichier complet
             prompt_text = VoxtralPrompts.get_meeting_summary_prompt(sections_list, adjusted_speaker_context, None, None)
-            print(f"🔍 Prompt généré: {len(prompt_text)} caractères")
-            
-            # Debug: Afficher le prompt complet envoyé à Voxtral
-            print(f"\n🔍 PROMPT VOXTRAL MLX:")
-            print("=" * 80)
-            print(prompt_text[:500] + "..." if len(prompt_text) > 500 else prompt_text, flush=True)
-            print("=" * 80)
             
             print(f"🔄 Début analyse MLX du fichier {wav_path}")
             chunk_start_time = time.time()
@@ -326,8 +314,6 @@ class VoxtralMLXAnalyzer:
             chunk_duration = time.time() - chunk_start_time
             
             print(f"✅ Analyse terminée en {format_duration(chunk_duration)}")
-            print(f"🔍 Résultat: {len(chunk_summary)} caractères")
-            print(f"🔍 Début du résultat: {chunk_summary[:200]}...")
             
             # Calculer et afficher le temps total
             total_duration = time.time() - total_start_time
@@ -382,11 +368,6 @@ class VoxtralMLXAnalyzer:
                 chunk_info = f"SEGMENT {i+1}/{len(chunks)} ({start_time/60:.1f}-{end_time/60:.1f}min)" if len(chunks) > 1 else None
                 prompt_text = VoxtralPrompts.get_meeting_summary_prompt(sections_list, adjusted_speaker_context, chunk_info, None)
                 
-                # Debug: Afficher le prompt complet envoyé à Voxtral
-                print(f"\n🔍 PROMPT VOXTRAL MLX (chunk {i+1}):")
-                print("=" * 80)
-                print(prompt_text, flush=True)
-                print("=" * 80)
                 
                 chunk_summary = self._analyze_audio_chunk_mlx(chunk_path, prompt_text)
                 
@@ -394,7 +375,7 @@ class VoxtralMLXAnalyzer:
                 
                 # Calculer et afficher le temps de traitement
                 chunk_duration = time.time() - chunk_start_time
-                print(f"✅ Chunk {i+1} analysé en {format_duration(chunk_duration)}: {len(chunk_summary)} caractères")
+                print(f"✅ Chunk {i+1} analysé en {format_duration(chunk_duration)}")
                 
             except Exception as e:
                 print(f"❌ Erreur chunk {i+1}: {e}")
@@ -424,6 +405,9 @@ class VoxtralMLXAnalyzer:
         total_duration = time.time() - total_start_time
         print(f"⏱️ Analyse directe MLX totale en {format_duration(total_duration)} pour {duration:.1f}min d'audio")
         
+        # Print token usage summary
+        token_tracker.print_summary()
+        
         return {"transcription": final_analysis}
     
     def _synthesize_chunks_final_mlx(self, combined_content: str, selected_sections: list) -> str:
@@ -441,8 +425,6 @@ class VoxtralMLXAnalyzer:
             # S'assurer que le modèle est chargé
             self._load_model()
             
-            print(f"🔍 MLX: Synthèse finale des segments...")
-            
             # Créer le prompt pour la synthèse finale
             sections_text = ""
             if selected_sections:
@@ -455,6 +437,12 @@ class VoxtralMLXAnalyzer:
             synthesis_prompt = f"""Voici les analyses détaillées de plusieurs segments d'une réunion :
 
 {combined_content}
+
+INSTRUCTION CRITIQUE - LANGUE DE RÉPONSE :
+- DÉTECTE la langue utilisée dans les segments ci-dessus
+- RÉPONDS OBLIGATOIREMENT dans cette même langue détectée
+- Si les segments sont en français → réponds en français
+- Si les segments sont en anglais → réponds en anglais
 
 Synthétise maintenant ces analyses en un résumé global cohérent et structuré selon les sections demandées :{sections_text}
 
@@ -470,11 +458,9 @@ Fournis une synthèse unifiée qui combine et résume les informations de tous l
                 }
             ]
             
-            print(f"🔍 MLX: Application du template pour la synthèse...")
             # Appliquer le template de chat
             inputs = self.processor.apply_chat_template(conversation, return_tensors="mlx")
             
-            print(f"🔍 MLX: Génération de la synthèse finale...")
             # Générer la synthèse avec MLX
             outputs = self.model.generate(
                 inputs["input_ids"],
@@ -486,7 +472,9 @@ Fournis une synthèse unifiée qui combine et résume les informations de tous l
             # Décoder la réponse
             # Convertir de MLX vers numpy/list avant décodage
             import mlx.core as mx
-            synthesis_tokens = outputs[0][inputs["input_ids"].shape[1]:]
+            input_tokens_count = inputs["input_ids"].shape[1]
+            synthesis_tokens = outputs[0][input_tokens_count:]
+            synthesis_tokens_count = len(synthesis_tokens)
             synthesis_tokens_numpy = mx.array(synthesis_tokens).tolist()
             
             final_synthesis = self.processor.tokenizer.decode(
@@ -494,7 +482,7 @@ Fournis une synthèse unifiée qui combine et résume les informations de tous l
                 skip_special_tokens=True
             ).strip()
             
-            print(f"🔍 MLX: Synthèse finale générée: {len(final_synthesis)} caractères")
+            token_tracker.add_synthesis_tokens(input_tokens_count, synthesis_tokens_count)
             
             return f"# Résumé Global de Réunion\n\n{final_synthesis}\n\n---\n\n## Détails par Segment\n\n{combined_content}"
             
