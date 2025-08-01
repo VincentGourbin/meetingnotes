@@ -28,3 +28,9 @@ __pycache__/
 # Fichiers de cache MLX/Hugging Face
 .cache/
 .huggingface/
+
+# Configuration Claude (agents et settings locaux)
+.claude/
+.claude/**/*
+.claudesync/
+*.claude

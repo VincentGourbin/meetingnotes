@@ -9,7 +9,7 @@ Web application using **Voxtral AI from Mistral AI** to automatically analyze yo
 - **Language-adaptive**: Automatically detects and responds in meeting language
 - **Centralized UI**: Clean English interface with multilingual analysis
 
-![Meeting Analysis Interface](Assets/meeting%20analysis%20parameters.png)
+![Meeting Analysis Interface](assets/meeting%20analysis%20parameters.png)
 
 ## 🚀 Quick Installation
 
@@ -54,19 +54,19 @@ MISTRAL_API_KEY=your_mistral_api_key
 Choose the mode that best fits your hardware and needs:
 
 #### Local Mode (Transformers)
-![Local Mode](Assets/local%20mode.png)
+![Local Mode](assets/local%20mode.png)
 - **Local processing**: Everything runs on your machine with PyTorch
 - **Privacy**: No data sent to external servers
 - **GPU acceleration**: Automatic CUDA/MPS detection
 
 #### MLX Mode (Apple Silicon)
-![MLX Mode](Assets/mlx%20mode.png)
+![MLX Mode](assets/mlx%20mode.png)
 - **Optimized for Mac**: M1/M2/M3 processors with MLX Framework
 - **Best performance**: Native Apple Silicon acceleration
 - **Memory efficient**: Optimized quantized models
 
 #### API Mode (Cloud)
-![API Mode](Assets/api%20mode.png)
+![API Mode](assets/api%20mode.png)
 - **Cloud processing**: Uses Mistral Cloud API
 - **No local resources**: Minimal memory usage
 - **Always up-to-date**: Latest models and improvements
@@ -83,7 +83,7 @@ Choose the mode that best fits your hardware and needs:
 
 ### Speaker Diarization
 
-![Speaker Diarization](Assets/diarization.png)
+![Speaker Diarization](assets/diarization.png)
 
 - **Automatic identification**: Detection of different speakers with pyannote.audio
 - **Reference segments**: Listen to audio samples for each speaker
@@ -122,7 +122,7 @@ Choose the mode that best fits your hardware and needs:
 - **File**: Direct audio or video (automatic extraction)
 - **Optional trimming**: Start/end trimming (leave empty for 0)
 
-![Trim Options](Assets/trim_options.png)
+![Trim Options](assets/trim_options.png)
 
 - **Chunk size**: Processing duration (5-25 minutes)
 
@@ -140,7 +140,7 @@ Choose the mode that best fits your hardware and needs:
 ### 5. Analysis and Results
 Click **"Analyze Meeting"** to get a customized structured summary.
 
-![Meeting Summary](Assets/meeting%20summary.png)
+![Meeting Summary](assets/meeting%20summary.png)
 
 ## 🏗️ Architecture
 
