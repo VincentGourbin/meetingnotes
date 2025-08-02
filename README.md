@@ -8,10 +8,18 @@ Web application using **Voxtral AI from Mistral AI** to automatically analyze yo
 - **Customizable summaries**: Modular sections according to your needs
 - **Language-adaptive**: Automatically detects and responds in meeting language
 - **Centralized UI**: Clean English interface with multilingual analysis
+- **🚀 Hugging Face Spaces**: Try the simplified version online at [VincentGOURBIN/MeetingNotes-Voxtral-Analysis](https://huggingface.co/spaces/VincentGOURBIN/MeetingNotes-Voxtral-Analysis)
 
 ![Meeting Analysis Interface](assets/meeting%20analysis%20parameters.png)
 
-## 🚀 Quick Installation
+## 🚀 Quick Start
+
+### 🌐 Online Version (Hugging Face Spaces)
+Try MeetingNotes directly in your browser: **[VincentGOURBIN/MeetingNotes-Voxtral-Analysis](https://huggingface.co/spaces/VincentGOURBIN/MeetingNotes-Voxtral-Analysis)**
+
+*This simplified version uses standard Mistral Voxtral models optimized for Zero GPU with automatic chunk processing.*
+
+### 💻 Local Installation (Full Version)
 
 1. **Clone the repository and install dependencies:**
 ```bash
@@ -144,8 +152,9 @@ Click **"Analyze Meeting"** to get a customized structured summary.
 
 ## 🏗️ Architecture
 
-The project follows a modular architecture in `src/meetingnotes/`:
+The project follows a modular architecture with two versions:
 
+### Main Project (`src/meetingnotes/`)
 ```
 src/meetingnotes/
 ├── ai/                    # Artificial Intelligence
@@ -171,6 +180,32 @@ src/meetingnotes/
     ├── time_formatter.py        # Duration formatting
     └── token_tracker.py          # Token usage tracking
 ```
+
+### Hugging Face Spaces Version (`huggingface-space/`)
+Simplified version deployed at [VincentGOURBIN/MeetingNotes-Voxtral-Analysis](https://huggingface.co/spaces/VincentGOURBIN/MeetingNotes-Voxtral-Analysis):
+```
+huggingface-space/
+├── src/
+│   ├── ai/
+│   │   ├── voxtral_spaces_analyzer.py   # HF Spaces optimized analyzer
+│   │   └── prompts_config.py            # Shared prompts configuration
+│   ├── ui/
+│   │   ├── spaces_interface.py          # Simplified Gradio interface
+│   │   └── labels.py                    # UI labels
+│   └── utils/
+│       ├── zero_gpu_manager.py          # Zero GPU management
+│       └── token_tracker.py             # Token tracking
+├── app.py                               # HF Spaces entry point
+├── requirements.txt                     # HF Spaces dependencies
+└── deploy.py                           # Deployment script
+```
+
+**Key differences in HF Spaces version:**
+- Only Transformers backend (no MLX/API modes)
+- Standard Mistral Voxtral models (optimized for Zero GPU)
+- No speaker diarization (simplified interface)
+- Progress bar with chunk-based tracking
+- Automatic chunk duration optimization (15min Mini, 10min Small)
 
 For more details, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -233,16 +268,19 @@ MISTRAL_API_KEY=your_mistral_key
 
 ## 🚦 Project Status
 
-✅ **Version v2.1** - Enhanced User Experience & Language Support
-- **3 processing modes**: Local, MLX, API with improved layout
-- **6 model configurations**: Mini/Small + Default/8bit/4bit  
-- **Complete diarization**: Speaker identification and renaming
+✅ **Version v2.2** - Hugging Face Spaces Integration
+- **🚀 HF Spaces version**: Simplified online version at [VincentGOURBIN/MeetingNotes-Voxtral-Analysis](https://huggingface.co/spaces/VincentGOURBIN/MeetingNotes-Voxtral-Analysis)
+- **3 processing modes**: Local, MLX, API with improved layout (main version)
+- **Standard Mistral models**: Original Voxtral models optimized for Zero GPU (HF Spaces)
+- **6 model configurations**: Mini/Small + Default/8bit/4bit (main version)
+- **Complete diarization**: Speaker identification and renaming (main version only)
 - **Modular summaries**: 9 customizable sections with preset profiles
 - **Language-adaptive AI**: Automatically responds in detected meeting language
+- **Progress tracking**: Real-time progress bar with chunk-based updates
 - **Centralized UI management**: Clean English interface with maintainable labels
 - **Token tracking**: Comprehensive usage statistics for all modes
 - **Improved UX**: Better API mode layout and visual organization
-- **Multi-platform support**: Windows, macOS, Linux
+- **Multi-platform support**: Windows, macOS, Linux (main), Zero GPU (HF Spaces)
 
 ## 🤝 Contributing
 
