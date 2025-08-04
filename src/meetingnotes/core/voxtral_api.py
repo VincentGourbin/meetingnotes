@@ -112,7 +112,8 @@ def on_audio_direct_analysis_api(
     language: str = "french",
     selected_sections: list = None,
     chunk_duration_minutes: int = 15,
-    reference_speakers_data=None
+    reference_speakers_data=None,
+    progress_callback=None
 ) -> Dict[str, str]:
     """
     Analyse directe de l'audio par chunks avec l'API Voxtral.
@@ -142,7 +143,8 @@ def on_audio_direct_analysis_api(
             language=language,
             selected_sections=selected_sections,
             chunk_duration_minutes=chunk_duration_minutes,
-            reference_speakers_data=reference_speakers_data
+            reference_speakers_data=reference_speakers_data,
+            progress_callback=progress_callback
         )
         
         print("✅ Analyse directe API terminée avec succès")

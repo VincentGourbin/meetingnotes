@@ -432,7 +432,8 @@ class VoxtralAPIAnalyzer:
         language: str = "french", 
         selected_sections: list = None,
         chunk_duration_minutes: int = 15,
-        reference_speakers_data=None
+        reference_speakers_data=None,
+        progress_callback=None
     ) -> Dict[str, str]:
         """
         Analyse directe de l'audio par chunks via l'API Voxtral.
@@ -483,11 +484,18 @@ class VoxtralAPIAnalyzer:
         
         print(f"📦 Division en {len(chunks)} chunks de {chunk_duration_minutes} minutes")
         
+        # Calculer le nombre total d'étapes pour la progression (chunks + synthèse si plusieurs chunks)
+        total_steps = len(chunks) + (1 if len(chunks) > 1 else 0)
+        
         # Liste pour stocker les analyses de chaque chunk
         chunk_analyses = []
         
         for i, (start_ms, end_ms) in enumerate(chunks):
             print(f"🎯 Analyse du chunk {i+1}/{len(chunks)} ({start_ms/60000:.1f}-{end_ms/60000:.1f}min)")
+            
+            # Mise à jour de la progression
+            if progress_callback:
+                progress_callback((i / total_steps), f"Analyse API chunk {i+1}/{len(chunks)}")
             
             # Mesurer le temps de traitement du chunk
             chunk_start_time = time.time()
@@ -545,12 +553,27 @@ class VoxtralAPIAnalyzer:
             if len(chunk_analyses) == 1:
                 # Un seul chunk, pas besoin de synthèse
                 final_analysis = chunk_analyses[0]
+                
+                # Progression complète pour un chunk unique
+                if progress_callback:
+                    progress_callback(1.0, "Analyse terminée !")
+                
                 print(f"✅ Analyse directe API terminée")
             else:
                 # Plusieurs chunks : synthèse finale en mode texte
                 print(f"🔄 Synthèse finale API en mode texte des {len(chunk_analyses)} segments...")
+                
+                # Mise à jour de la progression pour la synthèse
+                if progress_callback:
+                    progress_callback((len(chunks) / total_steps), "Synthèse finale en cours...")
+                
                 combined_content = "\n\n".join(chunk_analyses)
                 final_analysis = self._synthesize_chunks_final_api(combined_content, selected_sections)
+                
+                # Progression complète après synthèse
+                if progress_callback:
+                    progress_callback(1.0, "Analyse terminée !")
+                
                 print(f"✅ Analyse API avec synthèse finale terminée avec {len(chunk_analyses)} segments")
         else:
             final_analysis = "Aucune analyse disponible."

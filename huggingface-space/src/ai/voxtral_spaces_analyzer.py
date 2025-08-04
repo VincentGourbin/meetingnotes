@@ -351,11 +351,6 @@ class VoxtralSpacesAnalyzer:
             None
         )
         
-        # Debug: Print prompt to check language
-        print("🔍 DEBUG PROMPT:")
-        print("=" * 50)
-        print(prompt_text[:500] + "..." if len(prompt_text) > 500 else prompt_text)
-        print("=" * 50)
         
         # Create conversation for audio instruct mode
         conversation = [{

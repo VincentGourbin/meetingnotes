@@ -107,7 +107,8 @@ def on_audio_direct_analysis(
     start_trim=0,
     end_trim=0,
     chunk_duration_minutes=15,
-    reference_speakers_data=None
+    reference_speakers_data=None,
+    progress_callback=None
 ):
     """
     Analyse directe de chunks audio via l'audio instruct mode.
@@ -144,7 +145,8 @@ def on_audio_direct_analysis(
             language=language,
             selected_sections=selected_sections,
             chunk_duration_minutes=chunk_duration_minutes,
-            reference_speakers_data=reference_speakers_data
+            reference_speakers_data=reference_speakers_data,
+            progress_callback=progress_callback
         )
         
         return results
@@ -169,9 +171,11 @@ def on_audio_instruct_summary(
     start_trim=0,
     end_trim=0,
     chunk_duration_minutes=15,
-    reference_speakers_data=None
+    reference_speakers_data=None,
+    progress_callback=None
 ):
     return on_audio_direct_analysis(
         file, hf_token, model_name, language, selected_sections, 
-        start_trim, end_trim, chunk_duration_minutes, reference_speakers_data
+        start_trim, end_trim, chunk_duration_minutes, reference_speakers_data,
+        progress_callback
     )

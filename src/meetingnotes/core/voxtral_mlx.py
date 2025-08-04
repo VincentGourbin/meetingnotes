@@ -22,7 +22,8 @@ def on_audio_direct_analysis_mlx(
     language: str = "french",
     selected_sections: list = None,
     chunk_duration_minutes: int = 15,
-    reference_speakers_data: Optional[str] = None
+    reference_speakers_data: Optional[str] = None,
+    progress_callback=None
 ) -> Dict[str, str]:
     """
     Analyse directe d'un fichier audio avec Voxtral MLX.
@@ -56,7 +57,8 @@ def on_audio_direct_analysis_mlx(
             language=language,
             selected_sections=selected_sections,
             chunk_duration_minutes=chunk_duration_minutes,
-            reference_speakers_data=reference_speakers_data
+            reference_speakers_data=reference_speakers_data,
+            progress_callback=progress_callback
         )
         
         print(f"✅ Analyse directe MLX terminée avec succès")
@@ -86,7 +88,8 @@ def on_audio_instruct_summary_mlx(
     chunk_duration_minutes: int = 15,
     reference_speakers_data: Optional[str] = None,
     start_trim: float = 0,
-    end_trim: float = 0
+    end_trim: float = 0,
+    progress_callback=None
 ) -> Dict[str, str]:
     """
     Interface simplifiée pour l'analyse instruct avec MLX.
@@ -110,5 +113,6 @@ def on_audio_instruct_summary_mlx(
         language=language,
         selected_sections=selected_sections,
         chunk_duration_minutes=chunk_duration_minutes,
-        reference_speakers_data=reference_speakers_data
+        reference_speakers_data=reference_speakers_data,
+        progress_callback=progress_callback
     )

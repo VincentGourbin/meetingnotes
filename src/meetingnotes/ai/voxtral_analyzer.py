@@ -482,7 +482,8 @@ class VoxtralAnalyzer:
         language: str = "french", 
         selected_sections: list = None,
         chunk_duration_minutes: int = 15,
-        reference_speakers_data=None
+        reference_speakers_data=None,
+        progress_callback=None
     ) -> Dict[str, str]:
         """
         Analyse directe de l'audio par chunks via audio instruct mode.
@@ -490,8 +491,10 @@ class VoxtralAnalyzer:
         Args:
             wav_path (str): Chemin vers le fichier audio
             language (str): Langue attendue
-            meeting_type (str): Type de réunion
+            selected_sections (list): Sections d'analyse à inclure
             chunk_duration_minutes (int): Durée des chunks en minutes
+            reference_speakers_data: Données de diarisation
+            progress_callback: Fonction de callback pour le suivi de progression
             
         Returns:
             Dict[str, str]: Résultats avec 'transcription' (analyse concaténée)
@@ -521,11 +524,19 @@ class VoxtralAnalyzer:
         
         print(f"📦 Division en {len(chunks)} chunks de {chunk_duration_minutes} minutes")
         
+        # Calculer le nombre total d'étapes pour la progression (chunks + synthèse si plusieurs chunks)
+        total_steps = len(chunks) + (1 if len(chunks) > 1 else 0)
+        
         # Liste pour stocker les résumés de chaque chunk
         chunk_summaries = []
         
         for i, (start_time, end_time) in enumerate(chunks):
             print(f"🎯 Traitement du chunk {i+1}/{len(chunks)} ({start_time/60:.1f}-{end_time/60:.1f}min)")
+            
+            # Mise à jour de la progression
+            if progress_callback:
+                progress_callback((i / total_steps), f"Analyse du chunk {i+1}/{len(chunks)}")
+            
             MemoryManager.print_memory_stats(f"Avant chunk {i+1}")
             
             # Mesurer le temps de traitement du chunk
@@ -547,6 +558,7 @@ class VoxtralAnalyzer:
                 # Indiquer que c'est un segment d'un audio plus long seulement s'il y a plusieurs chunks
                 chunk_info = f"SEGMENT {i+1}/{len(chunks)} ({start_time/60:.1f}-{end_time/60:.1f}min)" if len(chunks) > 1 else None
                 prompt_text = VoxtralPrompts.get_meeting_summary_prompt(sections_list, adjusted_speaker_context, chunk_info, None)
+                
                 
 
                 conversation = [{
@@ -606,12 +618,27 @@ class VoxtralAnalyzer:
             if len(chunk_summaries) == 1:
                 # Un seul chunk, pas besoin de synthèse
                 final_analysis = chunk_summaries[0]
+                
+                # Progression complète pour un chunk unique
+                if progress_callback:
+                    progress_callback(1.0, "Analyse terminée !")
+                    
                 print(f"✅ Analyse directe terminée")
             else:
                 # Plusieurs chunks : synthèse finale en mode texte
                 print(f"🔄 Synthèse finale en mode texte des {len(chunk_summaries)} segments...")
+                
+                # Mise à jour de la progression pour la synthèse
+                if progress_callback:
+                    progress_callback((len(chunks) / total_steps), "Synthèse finale en cours...")
+                
                 combined_content = "\n\n".join(chunk_summaries)
                 final_analysis = self._synthesize_chunks_final(combined_content, selected_sections)
+                
+                # Progression complète après synthèse
+                if progress_callback:
+                    progress_callback(1.0, "Analyse terminée !")
+                    
                 print(f"✅ Analyse avec synthèse finale terminée avec {len(chunk_summaries)} segments")
         else:
             final_analysis = "Aucune analyse disponible."

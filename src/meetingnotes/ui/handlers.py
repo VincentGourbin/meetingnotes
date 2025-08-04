@@ -61,12 +61,13 @@ def handle_direct_transcription(
     hf_token, 
     language,
     transcription_mode,
-    mistral_api_key,
+    model_key,
     selected_sections,
     reference_speakers_data=None,
     start_trim=0,
     end_trim=0,
-    chunk_duration_minutes=15
+    chunk_duration_minutes=15,
+    progress=gr.Progress()
 ):
     """
     Gère la transcription directe avec sections personnalisables.
@@ -76,7 +77,7 @@ def handle_direct_transcription(
         hf_token (str): Token HF
         language (str): Langue
         transcription_mode (str): Mode de transcription
-        mistral_api_key (str): Clé API Mistral
+        model_key (str): Nom du modèle ou clé API Mistral
         selected_sections (list): Liste des sections à inclure dans le résumé
         reference_speakers_data: Contexte de diarisation (optionnel)
         start_trim (float): Secondes à enlever au début
@@ -134,7 +135,15 @@ def handle_direct_transcription(
         if not wav_path:
             return "", ""
         
+        # Setup progress callback
+        def progress_callback(progress_ratio, message):
+            progress(progress_ratio, desc=message)
+        
+        
         if is_api_mode:
+            # Pour le mode API, model_key contient la clé API
+            mistral_api_key = model_key
+            
             # Vérifier que la clé API est fournie
             if not mistral_api_key or not mistral_api_key.strip():
                 return "❌ Clé API Mistral requise pour le mode API.", ""
@@ -147,7 +156,8 @@ def handle_direct_transcription(
                 language=language,
                 selected_sections=selected_sections,
                 chunk_duration_minutes=chunk_duration_minutes,
-                reference_speakers_data=reference_speakers_data
+                reference_speakers_data=reference_speakers_data,
+                progress_callback=progress_callback
             )
         elif is_mlx_mode:
             # Mode MLX - analyse directe avec MLX
@@ -159,7 +169,8 @@ def handle_direct_transcription(
                 chunk_duration_minutes=chunk_duration_minutes,
                 reference_speakers_data=reference_speakers_data,
                 start_trim=0,  # Déjà fait dans process_file_direct_voxtral
-                end_trim=0
+                end_trim=0,
+                progress_callback=progress_callback
             )
         else:
             # Mode analyse directe local par chunks avec modèle choisi
@@ -172,7 +183,8 @@ def handle_direct_transcription(
                 start_trim=0,  # Déjà fait dans process_file_direct_voxtral
                 end_trim=0,
                 chunk_duration_minutes=chunk_duration_minutes,
-                reference_speakers_data=reference_speakers_data
+                reference_speakers_data=reference_speakers_data,
+                progress_callback=progress_callback
             )
         
         analysis_summary = results.get("transcription", "")
