@@ -13,13 +13,15 @@ from src.ui.spaces_interface import create_spaces_interface
 
 def main():
     """Main entry point for the Hugging Face Spaces app with native MCP server."""
-    
-    # Create the Gradio interface with native MCP support
-    interface = create_spaces_interface()
-    
-    # Launch with specific settings for HF Spaces and MCP server enabled
+
+    # Create the Gradio interface with native MCP support (Gradio 6 compatible)
+    interface, theme, css = create_spaces_interface()
+
+    # Launch with specific settings for HF Spaces and MCP server enabled (Gradio 6)
     port = int(os.environ.get("GRADIO_SERVER_PORT", 7860))
     interface.launch(
+        theme=theme,
+        css=css,
         server_name="0.0.0.0",
         server_port=port,
         share=False,

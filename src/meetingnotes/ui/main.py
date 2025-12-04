@@ -57,11 +57,9 @@ def main():
         spacing_size=gr.themes.sizes.spacing_md,
         radius_size=gr.themes.sizes.radius_md
     )
-    
-    with gr.Blocks(
-        theme=custom_glass_theme,
-        title="MeetingNotes - AI Analysis with Voxtral",
-        css="""
+
+    # CSS personnalisé pour l'application
+    custom_css = """
         .gradio-container {
             max-width: 1200px !important;
             margin: 0 auto !important;
@@ -87,6 +85,9 @@ def main():
             margin-top: 25px;
         }
         """
+
+    with gr.Blocks(
+        title="MeetingNotes - AI Analysis with Voxtral"
     ) as demo:
         # Main header with style
         with gr.Column(elem_classes="main-header"):
@@ -599,6 +600,8 @@ def main():
 
         # Lancement de l'application
         demo.launch(
+            theme=custom_glass_theme,
+            css=custom_css,
             share=False,
             inbrowser=True,
             show_error=True,

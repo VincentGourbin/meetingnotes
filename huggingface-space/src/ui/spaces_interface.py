@@ -210,11 +210,9 @@ def create_spaces_interface():
         spacing_size=gr.themes.sizes.spacing_md,
         radius_size=gr.themes.sizes.radius_md
     )
-    
-    with gr.Blocks(
-        theme=custom_glass_theme,
-        title="MeetingNotes - AI Analysis with Voxtral",
-        css="""
+
+    # CSS personnalisé pour l'application
+    custom_css = """
         .gradio-container {
             max-width: 1200px !important;
             margin: 0 auto !important;
@@ -240,6 +238,9 @@ def create_spaces_interface():
             margin-top: 25px;
         }
         """
+
+    with gr.Blocks(
+        title="MeetingNotes - AI Analysis with Voxtral"
     ) as demo:
         # Main header with style (identique à l'original)
         with gr.Column(elem_classes="main-header"):
@@ -492,10 +493,11 @@ def create_spaces_interface():
             gr.Markdown(
                 """
                 ---
-                **MeetingNotes** | Powered by [Voxtral](https://mistral.ai/) | 
+                **MeetingNotes** | Powered by [Voxtral](https://mistral.ai/) |
                 🚀 Intelligent meeting analysis | 💾 HF Spaces with Zero GPU
                 """,
                 elem_classes="footer-info"
             )
 
-    return demo
+    # Retourner demo avec le thème et le CSS pour Gradio 6
+    return demo, custom_glass_theme, custom_css
