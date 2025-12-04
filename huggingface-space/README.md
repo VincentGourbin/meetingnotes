@@ -13,39 +13,40 @@ short_description: AI meeting analysis with Voxtral transcription & summary
 models:
 - mistralai/Voxtral-Mini-3B-2507
 - mistralai/Voxtral-Small-24B-2507
+- pyannote/speaker-diarization-3.1
 tags:
 - meeting-analysis
 - transcription
 - voxtral
+- speaker-diarization
 - ai-summarization
 - zero-gpu
 - mcp-server
-- progress-tracking
 ---
 
 # 🎙️ MeetingNotes - AI Analysis with Voxtral
 
-Transform your meeting recordings into structured, actionable insights with advanced AI analysis powered by standard Mistral Voxtral models optimized for Zero GPU.
+Transform your meeting recordings into structured, actionable insights with advanced AI analysis powered by Voxtral models and speaker diarization.
 
 ## ⚡ Features
 
 🤖 **Advanced AI Models**:
-- **Voxtral-Mini-3B-2507**: Fast processing for quick analysis (15min chunks)
-- **Voxtral-Small-24B-2507**: Enhanced quality for detailed summaries (10min chunks)
-- **Standard Mistral Models**: Original models optimized for Zero GPU
+- **Voxtral-Mini-3B-2507**: Fast processing for quick analysis
+- **Voxtral-Small-24B-2507**: Enhanced quality for detailed summaries
+- **8-bit quantization**: Optimized for Zero GPU efficiency
 
 🎯 **Smart Analysis**:
 - **Executive Summaries**: Key decisions and outcomes
 - **Action Plans**: Clear next steps and responsibilities  
+- **Speaker Diarization**: Identify and separate different speakers
 - **Multi-language Support**: Automatic language detection
 - **Customizable Sections**: Choose analysis focus areas
-- **Progress Tracking**: Real-time progress with chunk-based updates
 
 📊 **Processing Options**:
-- **Auto-optimized Chunks**: Model-specific duration optimization for Zero GPU
+- **Chunk-based Processing**: Handle long recordings efficiently
+- **Reference Segments**: Preview identified speakers
 - **Audio Trimming**: Process specific time ranges
 - **Quality Presets**: Action-oriented vs Information meetings
-- **Synthesis**: Intelligent combination of multi-chunk analysis
 
 🔧 **Native MCP Support**:
 - **analyze_meeting_audio()**: Full meeting analysis with configurable options
@@ -61,10 +62,10 @@ Transform your meeting recordings into structured, actionable insights with adva
 4. **Analyze**: Get structured meeting insights
 
 ### Advanced Features
+- **Speaker Diarization**: Enable to identify different speakers
 - **Custom Sections**: Select specific analysis focus areas
 - **Meeting Presets**: Quick setup for action vs information meetings
 - **Audio Trimming**: Process only relevant portions
-- **Progress Tracking**: Real-time updates during processing
 
 ### MCP Integration
 This app provides native MCP (Model Context Protocol) server functionality:
@@ -84,10 +85,5 @@ This app provides native MCP (Model Context Protocol) server functionality:
 - **Zero GPU**: Efficient processing without persistent storage
 - **Local Processing**: Audio analyzed securely in HF Spaces environment
 - **No Data Retention**: Recordings processed temporarily only
-
-## 🔗 Related Links
-
-- **Full Version**: Complete MeetingNotes with MLX, API modes, and speaker diarization available on [GitHub](https://github.com/VincentGourbin/meetingnotes)
-- **Models**: [Voxtral-Mini-3B-2507](https://huggingface.co/mistralai/Voxtral-Mini-3B-2507) | [Voxtral-Small-24B-2507](https://huggingface.co/mistralai/Voxtral-Small-24B-2507)
 
 Start analyzing your meetings with AI precision! 🎙️✨

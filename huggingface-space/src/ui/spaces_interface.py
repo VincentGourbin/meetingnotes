@@ -240,7 +240,9 @@ def create_spaces_interface():
         """
 
     with gr.Blocks(
-        title="MeetingNotes - AI Analysis with Voxtral"
+        title="MeetingNotes - AI Analysis with Voxtral",
+        theme=custom_glass_theme,
+        css=custom_css
     ) as demo:
         # Main header with style (identique à l'original)
         with gr.Column(elem_classes="main-header"):
@@ -499,5 +501,5 @@ def create_spaces_interface():
                 elem_classes="footer-info"
             )
 
-    # Retourner demo avec le thème et le CSS pour Gradio 6
-    return demo, custom_glass_theme, custom_css
+    # Retourner demo (thème et CSS déjà configurés dans gr.Blocks pour Gradio 6)
+    return demo
